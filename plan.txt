@@ -1,1 +1,38 @@
 Learn FastAPI
+
+Assignment: Student Grade Tracker API
+Background
+You are building a simple REST API for a university grade tracker. Students can be registered, have grades submitted for them, and retrieve their average grade. All data can be stored in a plain Python dictionary in memory — no database needed.
+
+Requirements
+Model a student record with the following fields:
+
+name — a string
+student_id — an integer
+grades — a list of floats
+
+
+Implement the following four routes:
+1. POST /students
+
+Register a new student. Accepts name and student_id. Their grades list starts empty. Returns a confirmation message.
+2. GET /students/{student_id}
+
+Return the student's name, id, and grades list. If the student doesn't exist, return a 404 error with a meaningful message.
+3. POST /students/{student_id}/grades
+
+Add a grade (a single float) to a student's grades list. If the student doesn't exist, return a 404.
+4. GET /students/{student_id}/average
+
+Return the student's average grade. If they have no grades yet, return a meaningful message instead of crashing.
+
+Deliverables
+
+A single main.py file
+A sender.py that tests all four routes and prints the responses
+
+
+Constraints
+
+No external libraries beyond FastAPI, Pydantic, and requests
+Don't look up how to do 404 errors specifically — reason through it yourself first, then look it up if needed
