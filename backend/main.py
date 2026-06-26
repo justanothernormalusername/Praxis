@@ -61,12 +61,15 @@ async def get_student(student_id: int) -> dict:
         return {"name": student["name"], "grades": student["grades"]}
     raise HTTPException(status_code=404, detail="Student not found")
 
+class Grade(BaseModel):
+    grade: float
+
 @app.post("/student/{student_id}/grades")
-async def add_grade(student_id: int, grade: float) -> dict:
+async def add_grade(student_id: int, grade: Grade) -> dict:
     if student_id in student_record:
         student = student_record[student_id]
-        student["grades"].append(grade)
-        return {"response": f"Appended a {grade} to {student["name"]}'s grades"}
+        student["grades"].append(grade.grade)
+        return {"response": f"Appended a {grade.grade} to {student["name"]}'s grades"}
     raise HTTPException(status_code=404, detail="Student not found")
 
 @app.get("/student/{student_id}/average")
