@@ -8,7 +8,7 @@ Requirements
 Model a student record with the following fields:
 
 name — a string
-student_id — an integer
+student_id - an integer
 grades — a list of floats
 
 
