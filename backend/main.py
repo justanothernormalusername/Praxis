@@ -56,14 +56,18 @@ async def add_student(student: Student) -> dict:
 
 @app.get("/student/{student_id}")
 async def get_student(student_id: int) -> dict:
-    if student_record[student_id]:
+    if student_id in student_record:
         student = student_record[student_id]
         return {"name": student["name"], "grades": student["grades"]}
     raise HTTPException(status_code=404, detail="Student not found")
 
 @app.post("/student/{student_id}/grades")
-async def add_grade(student_id: int) -> dict:
-    return {"message": "Hello World"}
+async def add_grade(student_id: int, grade: float) -> dict:
+    if student_id in student_record:
+        student = student_record[student_id]
+        student["grades"].append(grade)
+        return {"response": f"Appended a {grade} to {student["name"]}'s grades"}
+    raise HTTPException(status_code=404, detail="Student not found")
 
 @app.get("/student/{student_id}/average")
 async def root() -> dict:
