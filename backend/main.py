@@ -70,5 +70,10 @@ async def add_grade(student_id: int, grade: float) -> dict:
     raise HTTPException(status_code=404, detail="Student not found")
 
 @app.get("/student/{student_id}/average")
-async def root() -> dict:
-    return {"message": "Hello World"}
+async def get_grade(student_id: int) -> dict:
+    if student_id in student_record:
+        student = student_record[student_id]
+        if len(student["grades"]) == 0:
+            return {"detail": f"{student["name"]} does not have any grades"}
+        return {"average_grade": sum(student["grades"]) / len(student["grades"])}
+    raise HTTPException(status_code=404, detail="Student not found")
