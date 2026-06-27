@@ -1,1 +1,9 @@
 TODO
+
+1. openrouter
+DONE
+
+2. memory
+3. orchestrator
+4. agent pipeline
+
