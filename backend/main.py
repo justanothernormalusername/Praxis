@@ -9,14 +9,14 @@ import os
 app = FastAPI()
 
 load_dotenv()
-PROVIDER = "HACKCLUBAI"  # Choose HACKCLUBAI or OPENROUTER
-MODEL = "~anthropic/claude-sonnet-latest"
+provider = "HACKCLUBAI"  # Choose HACKCLUBAI or OPENROUTER
+model = "~anthropic/claude-sonnet-latest"
 
 
-if PROVIDER == "HACKCLUBAI":
+if provider == "HACKCLUBAI":
     API_KEY = os.getenv("HACKCLUBAI_API_KEY")
     URL = "https://ai.hackclub.com/proxy/v1/chat/completions"
-elif PROVIDER == "OPENROUTER":
+elif provider == "OPENROUTER":
     API_KEY = os.getenv("OPENROUTER_API_KEY")
     URL = "https://openrouter.ai/api/v1/chat/completions"
 else:
@@ -29,7 +29,7 @@ async def chat_with_ai(content: list) -> str:
             url = URL,
             headers = {"Authorization": f"Bearer {API_KEY}"},
             data = json.dumps({
-                "model": MODEL,
+                "model": model,
                 "messages": content
             })
         )

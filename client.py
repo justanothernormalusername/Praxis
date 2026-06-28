@@ -1,10 +1,17 @@
 import requests
 
+instructions = "Start each response with [BOT]"
+
 messages = [
-    {
-        "role": "user",
-        "content": "Hello World"
-    }
+    {"role": "system", "content": instructions}
 ]
 
-print(requests.post("http://127.0.0.1:8000", json={"content": messages}).json())
+while True:
+    new_message = input()
+    messages.append({"role": "user", "content": new_message})
+
+    reply = requests.post("http://127.0.0.1:8000", json={"content": messages}).json()["response"]
+    messages.append({"role": "assistant", "content": reply})
+
+    print(reply)
+
