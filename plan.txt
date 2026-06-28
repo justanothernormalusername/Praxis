@@ -13,5 +13,17 @@ Append each user input and assistant response to a messages array before the nex
 full messages array is sent with each request
 
 3. orchestrator
+
+write out full prompting for initial chatbot agent
+including tool call descriptions
+
+start looking at orchestrator frameworks
+and models
+
+need to route to each agent
+each route will use different POST url
+
 4. agent pipeline
 
+will need web access (search agent)
+coding agent
