@@ -6,31 +6,43 @@ import requests
 import json
 import os
 
-load_dotenv()
-API_KEY = os.getenv("OPENROUTER_API_KEY")
-
-async def chat_with_ai(content: str) -> str:
-    def make_request() -> str:
-        response = requests.post(
-            url="https://ai.hackclub.com/proxy/v1/chat/completions",
-            headers={"Authorization": f"Bearer {API_KEY}"},
-            data=json.dumps({
-                "model": "openai/gpt-4o",
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": content
-                    }
-                ]
-            })
-        )
-        return response.json()["choices"][0]["message"]["content"]
-    return await asyncio.to_thread(make_request)
-
 app = FastAPI()
 
+load_dotenv()
+PROVIDER = "HACKCLUBAI"  # Choose HACKCLUBAI or OPENROUTER
+MODEL = "~anthropic/claude-sonnet-latest"
+
+
+if PROVIDER == "HACKCLUBAI":
+    API_KEY = os.getenv("HACKCLUBAI_API_KEY")
+    URL = "https://ai.hackclub.com/proxy/v1/chat/completions"
+elif PROVIDER == "OPENROUTER":
+    API_KEY = os.getenv("OPENROUTER_API_KEY")
+    URL = "https://openrouter.ai/api/v1/chat/completions"
+else:
+    raise Exception("Provider not found, please select between HACKCLUBAI and OPENROUTER")
+
+
+async def chat_with_ai(content: list) -> str:
+    def make_request() -> str:
+        response = requests.post(
+            url = URL,
+            headers = {"Authorization": f"Bearer {API_KEY}"},
+            data = json.dumps({
+                "model": MODEL,
+                "messages": content
+            })
+        )
+        # Error handling
+        if "error" in response.json():
+            return response.json()["error"]["message"]
+        return response.json()["choices"][0]["message"]["content"]
+    
+    return await asyncio.to_thread(make_request)
+
+
 class Content(BaseModel):
-    content: str
+    content: list
 
 @app.post("/")
 async def test(content: Content) -> dict:

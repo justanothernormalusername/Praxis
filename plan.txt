@@ -4,6 +4,14 @@ TODO
 DONE
 
 2. memory
+plaintext
+
+use all previous messages as context
+
+Append each user input and assistant response to a messages array before the next call.
+
+full messages array is sent with each request
+
 3. orchestrator
 4. agent pipeline
 
