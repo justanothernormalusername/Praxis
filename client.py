@@ -10,8 +10,12 @@ while True:
     new_message = input()
     messages.append({"role": "user", "content": new_message})
 
-    reply = requests.post("http://127.0.0.1:8000", json={"content": messages}).json()["response"]
-    messages.append({"role": "assistant", "content": reply})
+    reply = requests.post("http://127.0.0.1:8000", json={"messages": messages}).json()
+    messages.append({"role": "assistant", "content": reply["response"]})
 
-    print(reply)
+    print(reply["response"])
 
+    if reply["status"] == "done":
+        break
+
+print(reply)
