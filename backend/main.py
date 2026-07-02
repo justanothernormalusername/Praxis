@@ -28,26 +28,26 @@ tools = [
         "type": "function",
         "function": {
             "name": "output_result",
-            "description": "Always call after the third message, provide a summary of the conversation so far",
+            "description": "This tool is to be called when the end learning goal is fully clarified, and both you and the user have the a full exact picture of what they want to learn and accomplish from this experience.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "summary": {
+                    "learning_details": {
                         "type": "string",
-                        "description": "Summary of the conversation so far"
+                        "description": "Provide a full detailed description of all the information about the user, including programming ability, topic expected to cover (in detail), specific learning requirements, notes based off the user's personality/behavior or other additional information that may help with problem set engagement."
                     }
                 },
-                "required": ["summary"]
+                "required": ["learning_details"]
             }
         }
     }
 ]
 
-# Returns a tuple (status, content, summary)
+# Returns a tuple (status, content, learning_details)
 async def chat_with_ai(content: list) -> tuple:
     def make_request() -> tuple:
         status = "running"
-        summary = ""
+        learning_details = ""
 
         response = requests.post(
             url = URL,
@@ -62,14 +62,14 @@ async def chat_with_ai(content: list) -> tuple:
         # Error handling
         if "error" in response.json():
             status = "error"
-            return (status, response.json()["error"]["message"], summary)
+            return (status, response.json()["error"]["message"], learning_details)
 
         # Handle tool calling
         if response.json()["choices"][0]["finish_reason"] == "tool_calls":
             status = "done"
-            summary = json.loads(response.json()["choices"][0]["message"]["tool_calls"][0]["function"]["arguments"])["summary"]
+            learning_details = json.loads(response.json()["choices"][0]["message"]["tool_calls"][0]["function"]["arguments"])["learning_details"]
 
-        return (status, response.json()["choices"][0]["message"]["content"], summary)
+        return (status, response.json()["choices"][0]["message"]["content"], learning_details)
     return await asyncio.to_thread(make_request)
 
 
@@ -79,7 +79,7 @@ class Content(BaseModel):
 @app.post("/")
 async def test(content: Content) -> dict:
     output = await chat_with_ai(content.messages)
-    return {"status": output[0], "response": output[1], "summary": output[2]}
+    return {"status": output[0], "response": output[1], "learning_details": output[2]}
 
 response_format = {
     'id': 'gen-1782648906-K7oEDMaPpinEye24z43b', 
@@ -96,7 +96,7 @@ response_format = {
         'native_finish_reason': 'tool_use', 
         'message': {
             'role': 'assistant', 
-            'content': '[BOT] I apologize for the delay! Let me call the summary function right now!', 
+            'content': '[BOT] I apologize for the delay! Let me call the learning_details function right now!', 
             'refusal': None, 
             'reasoning': None, 
             'tool_calls': [{
@@ -105,7 +105,7 @@ response_format = {
                 'id': 'toolu_01AkSqB3TXEESYqwuLLJNfax', 
                 'function': {
                     'name': 'output_result', 
-                    'arguments': '{"summary": "The user greeted the bot and shared that their favourite color is purple. The bot responded by noting that purple is associated with creativity, wisdom, and royalty, and asked about their preferred shade. The user then asked for the bot\'s name, and the bot explained it is an AI assistant without a specific name. The user then requested a summary of the conversation."}'
+                    'arguments': '{"learning_details": "The user greeted the bot and shared that their favourite color is purple. The bot responded by noting that purple is associated with creativity, wisdom, and royalty, and asked about their preferred shade. The user then asked for the bot\'s name, and the bot explained it is an AI assistant without a specific name. The user then requested a learning_details of the conversation."}'
                     }
                 }]
             }
