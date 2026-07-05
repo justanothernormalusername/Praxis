@@ -12,7 +12,7 @@ while True:
     new_message = input()
     messages.append({"role": "user", "content": new_message})
 
-    reply = requests.post("http://127.0.0.1:8000", json={"messages": messages}).json()
+    reply = requests.post("http://127.0.0.1:8000/chat", json={"messages": messages}).json()
     messages.append({"role": "assistant", "content": reply["response"]})
 
     print(reply["response"])

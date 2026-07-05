@@ -30,6 +30,8 @@ Provide a full detailed description of all the information about the user, inclu
 start looking at orchestrator frameworks
 and models
 
+with spec
+
 need to route to each agent
 each route will use different POST url
 
