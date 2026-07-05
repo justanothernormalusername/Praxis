@@ -35,6 +35,12 @@ with spec
 need to route to each agent
 each route will use different POST url
 
+(from MITx Problem Set examples)
+Spec Schema:
+
+TODO
+refer to MITx problem sets as examples
+
 4. agent pipeline
 
 will need web access (search agent)
