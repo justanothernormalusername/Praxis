@@ -5,7 +5,6 @@ import asyncio
 import requests
 import json
 import os
-from typing import TypedDict
 
 app = FastAPI()
 
@@ -21,29 +20,8 @@ elif provider == "OPENROUTER":
 else:
     raise Exception("Provider not found, please select between HACKCLUBAI and OPENROUTER")
 
-
-class ToolParameters(TypedDict):
-    type: str
-    properties: dict
-    required: list[str]
-
-class ToolFunction(TypedDict):
-    name: str
-    description: str
-    parameters: ToolParameters
-
-class Tool(TypedDict):
-    type: str
-    function: ToolFunction
-
-
-class Message(TypedDict):
-    role: str
-    content: str
-
-
 # Returns a Request object
-async def chat_with_ai(model: str, content: list[Message], tools: list[Tool] | None = None) -> requests.models.Response:
+async def chat_with_ai(model: str, content: list, tools: list | None = None) -> requests.models.Response:
     def make_request() -> requests.models.Response:
         return requests.post(
             url = URL,
@@ -65,17 +43,24 @@ class Content(BaseModel):
 @app.post("/chat")
 async def chatbot_handler(content: Content) -> dict:
     # Tool for chatbot to end conversation and output learning_details
-    tool_properties = {
-                        "learning_details": {
-                            "type": "string",
-                            "description": "Provide a full detailed description of all the information about the user, including programming ability, topic expected to cover (in detail), specific learning requirements, notes based off the user's personality/behavior or other additional information that may help with problem set engagement."
-                        }
+    conversation_end_tool = {
+        "type": "function",
+        "function": {
+            "name": "output_result",
+            "description": "This tool is to be called when the end learning goal is fully clarified, and both you and the user have the a fullexact picture of what they want to learn and accomplish from this experience.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "learning_details": {
+                        "type": "string",
+                        "description": "Provide a full detailed description of all the information about the user, including programming ability,topic expected to cover (in detail), specific learning requirements, notes based off the user's personality/behavior orother additional information that may help with problem set engagement."
                     }
-    tool_parameters = ToolParameters(type="object", properties=tool_properties, required=["learning_details"])
-    tool_function = ToolFunction(name = "output_result", 
-                                 description = "This tool is to be called when the end learning goal is fully clarified, and both you and the user have the a full exact picture of what they want to learn and accomplish from this experience.", 
-                                 parameters = tool_parameters)
-    conversation_end_tool = Tool(type="function", function=tool_function)
+                },
+                "required": ["learning_details"]
+            }
+        }
+    }
+    
 
     response = await chat_with_ai("anthropic/claude-sonnet-4.6", content.messages, [conversation_end_tool])
     status = "running"
