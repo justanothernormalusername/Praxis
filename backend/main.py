@@ -86,10 +86,15 @@ class Details(BaseModel):
 @app.post("/plan")
 async def orchestrator(details: Details) -> str:
     instructions = "You are a model deployed as part of a learning app called Praxis. The learning app specifically focuses on programming, by generating engaging, stylized, homework like problem sets to exercise and teach techniques and content. The user will typically come in with only a vague idea of what they want to accomplish or learn, and a previous agent has already clarified the user's end learning goal and preference. Its summary will be provided to you, your goal is to provide a detailed spec to pass onto future agents that will write the exact descriptions, code, story and verification. Answer only in a json format with 4 specific sections: description, code, story and verification. Each will have a part for each section of the final problem set. You will be deciding how many parts the problem set will be, and the general title for each seperated section."
+    
+    with open("praxis_orchestrator_prompt.md") as f:
+        prompt = f.read()
+
     content = [
         {"role": "system", "content": instructions},
-        {"role": "user", "content": details.learning_details}
+        {"role": "user", "content": prompt}
     ]
+    
     response = await chat_with_ai("anthropic/claude-sonnet-4.6", content, [])
     return response.json()["choices"][0]["message"]["content"]
 

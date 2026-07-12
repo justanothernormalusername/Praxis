@@ -6,10 +6,10 @@ load_dotenv()
 API_KEY = os.getenv("HACKCLUBAI_API_KEY")
 URL = "https://ai.hackclub.com/proxy/v1/chat/completions"
 
-message = input()
+message = "ABC"
 model = "anthropic/claude-sonnet-4.6"
 content = [{"role": "user", "content": message}]
-tools = []
+tools = [{"name": "web search"}, {"name": "text developer"}]
 
 def make_request() -> requests.models.Response:
     return requests.post(
@@ -22,4 +22,8 @@ def make_request() -> requests.models.Response:
         }
     )
 
-print(make_request().json())
+# print(make_request().json())
+
+with open("praxis_orchestrator_prompt.md") as f:
+    content = f.read()
+print(content)
