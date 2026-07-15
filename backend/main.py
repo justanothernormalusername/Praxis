@@ -61,8 +61,9 @@ async def chatbot_handler(content: Content) -> dict:
         }
     }
     
+    model = "openai/gpt-oss-120b"  # anthropic/claude-sonnet-4.6
 
-    response = await chat_with_ai("anthropic/claude-sonnet-4.6", content.messages, [conversation_end_tool])
+    response = await chat_with_ai(model, content.messages, [conversation_end_tool])
     status = "running"
     response_output = response.json()["choices"][0]["message"]["content"]
     learning_details = ""
@@ -75,6 +76,7 @@ async def chatbot_handler(content: Content) -> dict:
     # Handle tool calling
     elif response.json()["choices"][0]["finish_reason"] == "tool_calls":
         status = "done"
+        print(response.json())
         learning_details = json.loads(response.json()["choices"][0]["message"]["tool_calls"][0]["function"]["arguments"])["learning_details"]
     
     return {"status": status, "response": response_output, "learning_details": learning_details}
@@ -95,7 +97,9 @@ async def orchestrator(details: Details) -> str:
         {"role": "user", "content": prompt}
     ]
     
-    response = await chat_with_ai("anthropic/claude-sonnet-4.6", content, [])
+    model = "openai/gpt-oss-120b"  # anthropic/claude-sonnet-4.6
+
+    response = await chat_with_ai(model, content, [])
     return response.json()["choices"][0]["message"]["content"]
 
 

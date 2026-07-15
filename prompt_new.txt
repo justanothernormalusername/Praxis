@@ -8,11 +8,11 @@ In charge of writing clear, structured, and story relevant descriptions for the 
 Example: 
 One way of transporting cows is to always pick the heaviest cow that will fit onto the spaceship first. This is an example of a greedy algorithm. So if there are only 2 tons of free space on your spaceship, with one cow that's 3 tons and another that's 1 ton, the 1 ton cow will get put onto the spaceship.
 
-Code agent
+Coding agent
 Writes the skeleton code, starter files and generates datasets
 
 Verification agent
-Writes the grader code, rubric, and scoring
+Writes the grader code, rubric, and scoring guidelines
 
 
 These tasks are what you must complete:

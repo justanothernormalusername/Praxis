@@ -550,3 +550,6 @@ state your assumption in `meta.assumptions_made`.
     }
   ]
 }
+
+Disclaimer, the json above is a worked example!!
+Modify the template to fit the input details, do not output the example word for word
