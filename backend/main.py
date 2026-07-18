@@ -11,9 +11,8 @@ app = FastAPI()
 load_dotenv()
 provider = "HACKCLUBAI"  # Choose HACKCLUBAI or OPENROUTER
 
-# anthropic/claude-sonnet-4.6
 chat_model = "tencent/hy3:free"
-plan_model = "tencent/hy3:free"
+plan_model = "anthropic/claude-sonnet-5"
 
 if provider == "HACKCLUBAI":
     API_KEY = os.getenv("HACKCLUBAI_API_KEY")
@@ -25,7 +24,11 @@ else:
     raise Exception("Provider not found, please select between HACKCLUBAI and OPENROUTER")
 
 # Returns a Request object
-async def chat_with_ai(model: str, content: list, tools: list) -> requests.models.Response:
+async def chat_with_ai(model: str, content: list, tools: list | None = None, response_format: dict | None = None) -> requests.models.Response:
+    if tools is None:
+        tools = []
+    if response_format is None:
+        response_format = {}
     def make_request() -> requests.models.Response:
         return requests.post(
             url = URL,
@@ -33,11 +36,11 @@ async def chat_with_ai(model: str, content: list, tools: list) -> requests.model
             json = {
                 "model": model,
                 "messages": content,
-                "tools": tools
+                "tools": tools,
+                "response_format": response_format
             }
         )
     response = await asyncio.to_thread(make_request)
-
     return response
 
 
@@ -90,17 +93,103 @@ class Details(BaseModel):
 
 @app.post("/plan")
 async def orchestrator(details: Details) -> str:
-    instructions = "You are a model deployed as part of a learning app called Praxis. The learning app specifically focuses on programming, by generating engaging, stylized, homework like problem sets to exercise and teach techniques and content. The user will typically come in with only a vague idea of what they want to accomplish or learn, and a previous agent has already clarified the user's end learning goal and preference. Its summary will be provided to you, your goal is to provide a detailed spec to pass onto future agents that will write the exact descriptions, code, story and verification. Answer only in a json format with 4 specific sections: description, code, story and verification. Each will have a part for each section of the final problem set. You will be deciding how many parts the problem set will be, and the general title for each separated section."
-    
-    with open("praxis_orchestrator_prompt.md") as f:
-        instructions = f.read()
+    instructions = """
+    Praxis Problem Set orchestrator System Prompt
+
+    Role
+    You are a problem set orchestrator for Praxis, a programming educational app about generating engaging, story-driven problem sets to aid in learning new programming concepts. You will take a learner profile produced by an earlier conversational chatbot and use its details to create a detailed json spec instructing downstream agents on their specific tasks and details. These are what each of them do. 
+
+    YOU ARE NOT DOING ANY OF THESE TASKS, THESE ARE THE 3 AGENTS THAT WILL WORK OFF YOUR OUTPUT:
+    Description agent
+    In charge of writing clear, structured, and story relevant descriptions for the problem set
+    Example: 
+    One way of transporting cows is to always pick the heaviest cow that will fit onto the spaceship first. This is an example of a greedy algorithm. So if there are only 2 tons of free space on your spaceship, with one cow that's 3 tons and another that's 1 ton, the 1 ton cow will get put onto the spaceship.
+
+    Coding agent
+    Writes the skeleton code, starter files and generates datasets
+
+    Verification agent
+    Writes the grader code, rubric, and scoring guidelines
+
+    Since these agents do not require full descriptions, you may respond with point form and key words, full sentences are unnecessary. You must determine the information going to each problem set section: too much will crowd the agents' contexts, while too little loses accuracy and coherency between parts. Ensure that each part of the problem flows into the next and the whole problem set works as a whole. 
+
+    These tasks are what you must complete:
+    Decide how many problem set parts there will be
+    Assign each part a title/story component
+    Decide the specific story (dont need to write it out, just explanations for downstream agents to recieve)
+    Fill in the json template spec and output
+
+    You are not limited to 2 parts, add as many as required to completely convey the learning material
+    """
 
     content = [
         {"role": "system", "content": instructions},
         {"role": "user", "content": details.learning_details}
     ]
+
+    template_fields = {
+        "title": {
+            "type": "string",
+            "description": "The problem set title"
+        },
+        "details": {
+            "type": "string",
+            "description": "A full summary of the story and its details that will be provided to every downstream agent"
+        },
+        "language": {
+            "type": "string",
+            "description": "The programming language used for the problem set"
+        },
+        "estimated_total_time_minutes": {
+            "type": "number",
+            "description": "The estimated total time to complete the whole problem set"
+        },
+        "parts": {
+            "type": "array",
+            "description": "A list of individual problem set sections, presented in order",
+            "minItems": 1,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "description": "The title of the specific problem set section"
+                    },
+                    "details": {
+                        "type": "string",
+                        "description": "Additional story or implementation details specific to this part, will be included with top level details"
+                    },
+                    "description_agent_notes": {
+                        "type": "string",
+                        "description": "Specific instructions, criteria and information given exclusively to the description agent"
+                    },
+                    "coding_agent_notes": {
+                        "type": "string",
+                        "description": "Specific instructions, criteria and information given exclusively to the coding agent"
+                    }
+                },
+                "required": ["title", "details", "description_agent_notes", "coding_agent_notes"],
+                "additionalProperties": False
+            }
+        }
+    }
+
+    response_format = {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "orchestrator_spec",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "properties": template_fields,
+                "required": ["title", "details", "language", "estimated_total_time_minutes", "parts"],
+                "additionalProperties": False
+            }
+        }
+    }
+
     print(details.learning_details)
-    response = await chat_with_ai(plan_model, content, [])
+    response = await chat_with_ai(plan_model, content, response_format=response_format)
 
     if "error" in response.json():
         return response.json()["error"]["message"]

@@ -1,5 +1,5 @@
+12:35, 25m
 TODOLISTRN
-force json output formatting
 refine system prompt
 
 next:
@@ -13,6 +13,8 @@ UI?
 
 *do later: refine chatbot prompt
 
+Testing prompt:
+User has prior experience with neural networks (not a complete beginner). Topic: building a small feedforward neural network with a small number of neurons and implementing backpropagation from scratch. Language: Python. Libraries: numpy allowed, but no large deep learning frameworks like PyTorch/TensorFlow. Style: storytelling narrative that wraps a hands-on implementation challenge (code-along style). Learning goal: reinforce understanding of forward pass and backprop math by implementing it manually. Keep the problem set concise and approachable.
 
 TODO
 

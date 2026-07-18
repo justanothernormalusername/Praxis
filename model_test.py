@@ -1,13 +1,14 @@
 from dotenv import load_dotenv
 import requests
 import os
+from pydantic import BaseModel
 
 load_dotenv()
 API_KEY = os.getenv("HACKCLUBAI_API_KEY")
 URL = "https://ai.hackclub.com/proxy/v1/chat/completions"
 
 # message = "ABC"
-model = "anthropic/claude-sonnet-4.6"
+model = "anthropic/claude-sonnet-5"
 
 json_template = {
     "title": "Space Cows",
@@ -42,6 +43,67 @@ messages = [
 
 tools = []
 
+template_fields = {
+    "title": {
+        "type": "string",
+        "description": "The problem set title"
+    },
+    "details": {
+        "type": "string",
+        "description": "A full summary of the story and its details that will be provided to every downstream agent"
+    },
+    "language": {
+        "type": "string",
+        "description": "The programming language used for the problem set"
+    },
+    "estimated_total_time_minutes": {
+        "type": "number",
+        "description": "The estimated total time to complete the whole problem set"
+    },
+    "parts": {
+        "type": "array",
+        "description": "A list of individual problem set sections, presented in order",
+        "minItems": 1,
+        "items": {
+            "type": "object",
+            "properties": {
+                "title": {
+                    "type": "string",
+                    "description": "The title of the specific problem set section"
+                },
+                "details": {
+                    "type": "string",
+                    "description": "Additional story or implementation details specific to this part, will be included with top level details"
+                },
+                "description_agent_notes": {
+                    "type": "string",
+                    "description": "Specific instructions, criteria and information given exclusively to the description agent"
+                },
+                "coding_agent_notes": {
+                    "type": "string",
+                    "description": "Specific instructions, criteria and information given exclusively to the coding agent"
+                }
+            },
+            "required": ["title", "details", "description_agent_notes", "coding_agent_notes"],
+            "additionalProperties": False
+        }
+    }
+}
+
+response_format = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "orchestrator_spec",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": template_fields,
+            "required": ["title", "details", "language", "estimated_total_time_minutes", "parts"],
+            "additionalProperties": False
+        }
+    }
+}
+
 def make_request() -> requests.models.Response:
     return requests.post(
         url = URL,
@@ -49,7 +111,8 @@ def make_request() -> requests.models.Response:
         json = {
             "model": model,
             "messages": messages,
-            "tools": tools
+            "tools": tools,
+            "response_format": response_format
         }
     )
 
@@ -61,4 +124,9 @@ while True:
     if not new_message:
         continue
     messages.append({"role": "user", "content": new_message})
-    print(make_request().json()["choices"][0]["message"]["content"])
+    response = make_request()
+    print(response.text)
+    if "error" in response.json():
+        print(response.json()["error"]["message"])
+    else:
+        print(response.json()["choices"][0]["message"]["content"])

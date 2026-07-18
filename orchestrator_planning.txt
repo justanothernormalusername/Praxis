@@ -51,4 +51,3 @@ Suppose (example data) - what does the algorithm do?
 Then what does it do?
 What is the final result?
 
-
