@@ -1,592 +1,180 @@
 {
   "meta": {
-    "title": "Signal & Noise: A Radio Telescope Data Pipeline",
-    "target_language": "Python 3",
+    "title": "The Cogwright's Apprentice",
+    "target_language": "Python 3 (numpy allowed, no DL frameworks)",
     "difficulty_level": "intermediate",
-    "estimated_total_time_minutes": 140,
-    "learner_goal_summary": "The learner wants to build a working multi-stage data processing pipeline using Python, gaining practical fluency with generators, iterators, and functional tools like map, filter, and reduce by constructing something that feels like real engineering work.",
-    "primary_concepts": [
-      "generators and the yield keyword",
-      "lazy evaluation and iterator protocol",
-      "map and filter as pipeline stages",
-      "functools.reduce for aggregation",
-      "composing iterators into a pipeline"
-    ],
-    "secondary_concepts": [
-      "list comprehensions vs generator expressions",
-      "enumerate and zip",
-      "basic statistics over streamed data",
-      "separation of data production from data consumption"
-    ],
+    "estimated_total_time_minutes": 90,
+    "learner_goal_summary": "User has prior NN exposure and wants to reinforce forward-pass and backprop math by manually implementing a small feedforward net from scratch in numpy, via a code-along story format.",
+    "primary_concepts": ["forward pass", "backpropagation", "gradient descent", "matrix operations for NN"],
+    "secondary_concepts": ["activation functions (sigmoid)", "loss (MSE)", "weight initialization"],
     "assumptions_made": [
-      "No explicit theme was specified by the learner, so a radio telescope signal-processing theme was chosen because it has a natural and clean analogy: raw signals arrive as a potentially infinite stream, each stage of the pipeline filters or transforms without loading everything into memory, and the final stage aggregates into a result — mirroring generators, map/filter, and reduce precisely.",
-      "Time budget was not specified precisely, so 140 minutes was chosen to allow four meaty parts at roughly 30-35 minutes each with a short capstone integration part.",
-      "The learner is assumed comfortable with basic Python (functions, loops, lists, basic classes) but has not deliberately used generators or functional tools before.",
-      "No visualization requirement was stated; a text-based printout of pipeline results is used as the payoff to keep scope manageable.",
-      "Standard library only (itertools, functools) — no third-party dependencies assumed."
+      "No specific dataset requested; a tiny synthetic XOR-style or linear-separable toy set is used so the math stays visible and the net is small (2-2-1).",
+      "User is comfortable with numpy arrays and broadcasting; no need to teach array basics.",
+      "'Concise and approachable' interpreted as 3 parts, ~30 min each, with a clear story wrapper but minimal fluff."
     ]
   },
 
   "narrative_brief": {
-    "theme": "Deep-space radio telescope signal processing station",
-    "setting": "The Peregrine Array, a remote automated radio telescope outpost that receives a continuous stream of raw signal readings from deep space. The learner is the lone on-duty Signal Analyst keeping the data pipeline running overnight.",
-    "premise": "The Peregrine Array never stops receiving data — signals pour in faster than any list can hold them. The station's ancient batch-processing software has failed, and the learner must rebuild the pipeline stage by stage: first generating the raw signal stream, then cleaning and transforming it, then filtering out noise, and finally aggregating the results into nightly reports. Each stage must hand data to the next without ever loading the whole stream into memory at once.",
-    "tone": "Quiet, atmospheric, and technically precise — like working a night shift at a remote outpost with only your instruments and a thermos of coffee. Deadpan dry humor is welcome; no melodrama. The 'stakes' are gently whimsical (the data just gets logged, nobody dies) but the engineering problem is real.",
-    "recurring_motifs": [
-      "the signal stream as an endless river of numbers",
-      "'noise floor' as the threshold below which readings are discarded",
-      "pipeline stages as physical filters bolted in sequence on a rack",
-      "ticks or 'sample windows' as the unit of time",
-      "the nightly report as the final aggregated output filed before dawn"
-    ],
-    "protagonist_or_frame_device": "The learner is the Signal Analyst on the overnight shift, writing the pipeline code that processes the Peregrine Array's incoming data before the morning crew arrives.",
-    "opening_hook_guidance": "Open with the Signal Analyst arriving at the console to find the old pipeline software crashed and a blinking cursor waiting. The raw signal feed is live and accumulating. Keep the hook under 120 words and end with a concrete first task: 'You need a generator that can produce signal samples on demand — because reading them all into a list at once would crash the station's memory in under a minute.'",
-    "closing_note_guidance": "Close by having the learner's own pipeline print the nightly report — a few lines of in-world output showing how many samples were processed, the strongest signal detected, and the average signal strength above the noise floor. Frame it as the log entry the morning crew will find. Should feel like a small, satisfying payoff, not a lecture recap."
+    "theme": "A clockwork apprentice building a 'thinking engine' from brass neurons for a quirky inventor",
+    "setting": "The workshop of Cogwright Aurelia, where neural nets are physical brass gates and levers rather than software â€” until the apprentice (learner) is told to build one in code",
+    "premise": "Aurelia needs a tiny brass brain that can learn a simple trick (like telling two lever patterns apart). The learner is her apprentice, handed the schematic and told to wire the forward flow, then teach it to learn by turning the correction cranks (backprop), all in Python.",
+    "tone": "Warm, lightly steampunk, code-along mentor voice â€” encourages tinkering, never condescending",
+    "recurring_motifs": ["brass neurons", "signal levers", "correction cranks", "the workshop ledger of errors"],
+    "protagonist_or_frame_device": "The learner is 'the Apprentice' receiving tasks from Cogwright Aurelia",
+    "opening_hook_guidance": "Aurelia hands the apprentice a 2-2-1 brass schematic and says 'wire the signal path first, we'll teach it later.' Under 120 words before Part 1.",
+    "closing_note_guidance": "Aurelia checks the ledger: the tiny net now separates the patterns. Frame as the apprentice's success log, not a recap lecture."
   },
 
   "learning_objectives": [
-    {
-      "objective": "Write a generator function using yield to produce values lazily on demand",
-      "bloom_level": "apply",
-      "assessed_in_parts": ["part_1"]
-    },
-    {
-      "objective": "Explain why a generator uses less memory than a list for large or infinite sequences",
-      "bloom_level": "understand",
-      "assessed_in_parts": ["part_1", "part_2"]
-    },
-    {
-      "objective": "Use map() with a transformation function to produce a new lazy stream from an existing iterator",
-      "bloom_level": "apply",
-      "assessed_in_parts": ["part_2"]
-    },
-    {
-      "objective": "Use filter() with a predicate function to selectively pass values through a pipeline stage",
-      "bloom_level": "apply",
-      "assessed_in_parts": ["part_3"]
-    },
-    {
-      "objective": "Use functools.reduce() to collapse a finite iterable into a single aggregated value",
-      "bloom_level": "apply",
-      "assessed_in_parts": ["part_4"]
-    },
-    {
-      "objective": "Compose multiple generator and functional-tool stages into a single end-to-end lazy pipeline",
-      "bloom_level": "analyze",
-      "assessed_in_parts": ["part_5"]
-    }
+    { "objective": "Implement a forward pass through a small FFN using matrix ops and sigmoid", "bloom_level": "apply", "assessed_in_parts": ["part_1"] },
+    { "objective": "Derive and implement backprop gradients for one hidden layer manually", "bloom_level": "analyze", "assessed_in_parts": ["part_2"] },
+    { "objective": "Train via gradient descent and observe loss drop on a toy task", "bloom_level": "evaluate", "assessed_in_parts": ["part_3"] }
   ],
 
   "prerequisites": {
-    "assumed_knowledge": [
-      "Python functions with parameters and return values",
-      "for loops and while loops",
-      "list comprehensions (basic syntax)",
-      "defining and calling functions",
-      "the random module basics (random.uniform, random.seed)"
-    ],
-    "explicit_non_goals": [
-      "asyncio or async generators — this set is entirely synchronous",
-      "itertools beyond islice (which is provided as scaffolding) — do not introduce tee, chain, groupby, etc.",
-      "class-based iterators with __iter__ and __next__ — yield-based generators only",
-      "NumPy or any array-processing library",
-      "performance profiling or memory benchmarking",
-      "file I/O or real signal data formats"
-    ]
+    "assumed_knowledge": ["numpy basics (array, dot, random)", "chain rule intuition", "sigmoid definition"],
+    "explicit_non_goals": ["CNNs/RNNs", "optimizers beyond vanilla SGD", "batch/minibatch beyond full-batch", "framework usage"]
   },
 
   "provided_scaffolding": {
     "files": [
-      {
-        "filename": "peregrine.py",
-        "purpose": "Main skeleton file the learner edits directly; contains all stubs and provided helpers",
-        "given_to_learner": true
-      },
-      {
-        "filename": "peregrine_runner.py",
-        "purpose": "Provided run script that imports from peregrine.py and calls run_pipeline() to print the nightly report; the learner does not edit this file",
-        "given_to_learner": true
-      }
+      { "filename": "cogwright.py", "purpose": "skeleton the learner edits", "given_to_learner": true }
     ],
     "provided_classes_or_functions": [
       {
-        "name": "take",
-        "role": "Wraps itertools.islice — consumes exactly n items from any iterator and returns them as a list. Provided so the learner can materialize a finite slice of an infinite generator for testing without needing to know islice syntax yet.",
+        "name": "sigmoid",
+        "role": "Fully implemented activation; keeps learner focused on pass/backprop structure",
         "fully_implemented": true,
-        "notes_for_code_agent": "Implement as: from itertools import islice; def take(n, iterable): return list(islice(iterable, n)). Include a one-line docstring. Keep it at the top of the file as a utility the learner will use in every part."
-      },
-      {
-        "name": "NOISE_FLOOR",
-        "role": "Module-level constant float set to 0.25. Represents the minimum signal strength a reading must exceed to be considered real rather than background noise. Used as the threshold in part_3's filter stage.",
-        "fully_implemented": true,
-        "notes_for_code_agent": "Define as NOISE_FLOOR = 0.25 near the top of the file, below imports, above all stubs. The Story Agent should frame this as a calibrated instrument constant that the analyst is not supposed to change."
-      },
-      {
-        "name": "CALIBRATION_OFFSET",
-        "role": "Module-level constant float set to 0.05. Represents a known systematic bias in the antenna hardware that must be subtracted from every raw reading during calibration. Used in part_2's map stage.",
-        "fully_implemented": true,
-        "notes_for_code_agent": "Define as CALIBRATION_OFFSET = 0.05 near the top of the file alongside NOISE_FLOOR."
+        "notes_for_code_agent": "def sigmoid(x): return 1/(1+np.exp(-x)); include stable note in docstring"
       }
     ],
-    "libraries_and_imports": [
-      "import random",
-      "import math",
-      "from itertools import islice",
-      "from functools import reduce"
-    ],
-    "environment_notes": [
-      "Standard CPython 3.8+ environment; no third-party packages required.",
-      "All randomness in tests should be controlled via random.seed() in the test harness.",
-      "peregrine_runner.py should import peregrine and call peregrine.run_pipeline(num_samples=500, seed=42) so results are reproducible when demonstrated."
-    ]
+    "libraries_and_imports": ["numpy as np"],
+    "environment_notes": ["Standard CPython 3 with numpy; no GPU mentioned"]
   },
 
   "parts": [
     {
       "part_id": "part_1",
-      "title": "The Signal Feed",
-      "concept_focus": ["generators and the yield keyword", "lazy evaluation"],
-      "difficulty_1_to_5": 1,
+      "title": "Wiring the Signal Levers",
+      "concept_focus": ["forward pass"],
+      "difficulty_1_to_5": 2,
       "depends_on_parts": [],
-      "narrative_tie_in": "The raw antenna feed produces a continuous stream of floating-point signal strength readings between 0.0 and 1.0. The old software tried to collect them all into a list first — that's why it crashed. The analyst's first job is to write a generator that produces readings one at a time, on demand, forever.",
-      "learner_task_spec": "Implement a generator function signal_feed(seed=None) that, when called, yields an infinite sequence of simulated raw signal readings. Each reading is a float drawn from random.uniform(0.0, 1.0). If seed is not None, the generator should call random.seed(seed) exactly once before beginning to yield values. The generator must never return — it yields indefinitely. The learner should also implement a second generator bounded_signal_feed(n, seed=None) that yields exactly n readings and then stops, to make manual testing easier. Both must be true generators (using yield), not functions that return lists.",
+      "narrative_tie_in": "Aurelia: 'Route the lever signals through the brass neurons. No learning yet â€” just show me the output for given weights.'",
+      "learner_task_spec": "Implement class TinyNet with __init__(self, w1, b1, w2, b2) storing weights as numpy arrays (shapes: w1 (2,2), b1 (2,), w2 (2,1), b2 (1,)). Implement forward(self, x) where x is (2,) or (N,2): return sigmoid(hidden) and sigmoid(output) via matrix ops. Return (out_hidden, out_final) tuple.",
       "starter_code_spec": {
         "entities": [
-          {
-            "kind": "function",
-            "name": "signal_feed",
-            "signature": "def signal_feed(seed=None):",
-            "docstring_requirements": "Describe that this is an infinite generator of float readings in [0.0, 1.0], that seed controls reproducibility, and that the caller must use take() or itertools.islice to consume a finite slice.",
-            "stub_behavior": "raise NotImplementedError"
-          },
-          {
-            "kind": "function",
-            "name": "bounded_signal_feed",
-            "signature": "def bounded_signal_feed(n, seed=None):",
-            "docstring_requirements": "Describe that this yields exactly n readings then stops; useful for testing without islice.",
-            "stub_behavior": "raise NotImplementedError"
-          }
+          { "kind": "class", "name": "TinyNet", "signature": "TinyNet(w1, b1, w2, b2)", "docstring_requirements": "Describe layer shapes and forward contract", "stub_behavior": "raise NotImplementedError" },
+          { "kind": "method", "name": "forward", "signature": "forward(self, x)", "docstring_requirements": "Note expected input shape and returned tuple", "stub_behavior": "raise NotImplementedError" }
         ]
       },
-      "edge_cases_to_handle": [
-        "take(0, signal_feed()) should return an empty list without hanging",
-        "calling signal_feed() twice without a seed should produce independent (non-identical) streams",
-        "calling signal_feed(seed=42) twice should produce identical streams (reproducibility test)",
-        "bounded_signal_feed(n) should yield exactly n items — check with len(list(bounded_signal_feed(7))) == 7"
-      ],
+      "edge_cases_to_handle": ["single sample (2,) vs batch (N,2) handling via np.atleast_2d or reshape", "sigmoid overflow on large pre-activations (use provided stable sigmoid)"],
       "hints_tiered": {
-        "tier_1_nudge": "A generator function looks just like a regular function but uses 'yield' instead of 'return'. What does that change about when the code inside runs?",
-        "tier_2_partial": "An infinite generator is just a while True loop with a yield inside. Python will pause the function at each yield and resume it the next time the caller asks for a value.",
-        "tier_3_near_solution": "signal_feed: optionally call random.seed(seed), then while True: yield random.uniform(0.0, 1.0). For bounded_signal_feed: use a for loop over range(n) with yield inside instead of while True."
+        "tier_1_nudge": "Hidden pre-activation is just x @ w1 + b1. What shape does b1 broadcast to?",
+        "tier_2_partial": "Use np.atleast_2d(x) at start of forward; compute h = sigmoid(np.dot(x2d, w1) + b1).",
+        "tier_3_near_solution": "out_hidden = sigmoid(x2d@w1 + b1); out_final = sigmoid(out_hidden@w2 + b2); return (out_hidden, out_final)"
       },
       "verification_spec": {
         "test_types": ["unit"],
         "sample_test_cases": [
-          {
-            "description": "take(5, signal_feed()) returns a list of exactly 5 floats",
-            "input": "take(5, signal_feed(seed=0))",
-            "expected_behavior": "result is a list of length 5, all values in [0.0, 1.0], type float"
-          },
-          {
-            "description": "seeded feed is reproducible",
-            "input": "take(10, signal_feed(seed=42)) called twice",
-            "expected_behavior": "both calls return identical lists"
-          },
-          {
-            "description": "signal_feed is a generator object, not a list",
-            "input": "type(signal_feed())",
-            "expected_behavior": "result is a generator (has __next__ and __iter__)"
-          },
-          {
-            "description": "bounded_signal_feed yields exactly n items",
-            "input": "list(bounded_signal_feed(7, seed=1))",
-            "expected_behavior": "list has length exactly 7"
-          },
-          {
-            "description": "bounded_signal_feed(0) yields nothing",
-            "input": "list(bounded_signal_feed(0))",
-            "expected_behavior": "empty list"
-          }
+          { "description": "forward on known tiny weights matches hand calc", "input": "w1=eye(2), b1=0, w2=[[1],[0]], b2=0, x=[1,0]", "expected_behavior": "out_final[0] approx sigmoid(1)" },
+          { "description": "batch of 3 returns shape (3,1) final", "input": "x shape (3,2)", "expected_behavior": "out_final.shape == (3,1)" }
         ],
         "grading_rubric": [
-          { "criterion": "signal_feed uses yield and is a true generator (not returning a list)", "points": 4 },
-          { "criterion": "seeded reproducibility works correctly", "points": 2 },
-          { "criterion": "bounded_signal_feed yields exactly n values and stops", "points": 3 },
-          { "criterion": "all yielded values are floats in [0.0, 1.0]", "points": 1 }
+          { "criterion": "correct matrix dims and broadcasting", "points": 4 },
+          { "criterion": "batch and single-sample both work", "points": 3 },
+          { "criterion": "uses provided sigmoid", "points": 1 }
         ],
-        "common_mistakes_to_flag": [
-          "using return inside a generator body with a list instead of yield — produces a TypeError when iterated",
-          "calling random.seed() on every iteration instead of once at the start, which breaks the intended distribution",
-          "forgetting to handle seed=None (should not call random.seed at all in that case, or behavior will be deterministic unintentionally)"
-        ]
+        "common_mistakes_to_flag": ["treating x as (2,) and getting shape errors", "adding b1 with wrong axis"]
       }
     },
 
     {
       "part_id": "part_2",
-      "title": "The Calibration Stage",
-      "concept_focus": ["map() with a transformation function", "lazy evaluation of map objects"],
-      "difficulty_1_to_5": 2,
+      "title": "Turning the Correction Cranks",
+      "concept_focus": ["backpropagation"],
+      "difficulty_1_to_5": 4,
       "depends_on_parts": ["part_1"],
-      "narrative_tie_in": "Every reading coming off the antenna has a known hardware bias baked in — the instrument consistently reads 0.05 too high due to thermal drift in the receiver. Before any analysis can happen, each raw reading must have CALIBRATION_OFFSET subtracted. The analyst writes a calibration stage that transforms the raw feed without touching the generator itself.",
-      "learner_task_spec": "Implement a function calibrate(stream) that takes any iterator of raw float readings and returns a new lazy iterator where each value has CALIBRATION_OFFSET subtracted. The returned object must be lazy — it must not materialize the stream into a list internally. Implement it using map() with a lambda or a named helper function. Then implement a second function normalize(stream) that takes any iterator of floats and returns a lazy iterator where each value is clamped to [0.0, 1.0] using min(1.0, max(0.0, value)) — because after calibration, some values might go negative or above 1.0. Both calibrate and normalize must be composable: normalize(calibrate(signal_feed())) must work as a single lazy chain.",
+      "narrative_tie_in": "Aurelia: 'It guessed wrong. Here's the error lever â€” now turn the cranks backward to find each weight's blame.'",
+      "learner_task_spec": "Add method backward(self, x, y) to TinyNet that computes gradients of MSE loss (mean over batch of (out_final - y)^2) w.r.t w1,b1,w2,b2 using chain rule. Return dict with keys 'dw1','db1','dw2','db2' as numpy arrays matching weight shapes. Reuse forward internally.",
       "starter_code_spec": {
         "entities": [
-          {
-            "kind": "function",
-            "name": "calibrate",
-            "signature": "def calibrate(stream):",
-            "docstring_requirements": "State that stream is any iterator of floats, that CALIBRATION_OFFSET is subtracted from each value, and that the returned object is lazy (a map object or generator).",
-            "stub_behavior": "raise NotImplementedError"
-          },
-          {
-            "kind": "function",
-            "name": "normalize",
-            "signature": "def normalize(stream):",
-            "docstring_requirements": "State that stream is any iterator of floats, that each value is clamped to [0.0, 1.0], and that the returned object is lazy.",
-            "stub_behavior": "raise NotImplementedError"
-          }
+          { "kind": "method", "name": "backward", "signature": "backward(self, x, y)", "docstring_requirements": "State loss is MSE, return grad dict", "stub_behavior": "raise NotImplementedError" }
         ]
       },
-      "edge_cases_to_handle": [
-        "a raw reading of exactly 0.0 after calibration becomes -0.05 — normalize must clamp it to 0.0",
-        "a raw reading of 1.0 after calibration becomes 0.95 — should remain 0.95, not be clamped",
-        "calibrate applied to an empty iterator should return an empty iterator without error",
-        "the returned objects must support being iterated with a for loop or passed to take()"
-      ],
+      "edge_cases_to_handle": ["y shape (N,) vs (N,1) â€” reshape consistent", "derivative of sigmoid: s*(1-s) applied to pre-activations"],
       "hints_tiered": {
-        "tier_1_nudge": "map() takes a function and an iterable and returns a lazy object that applies the function to each element one at a time. How do you write a function that subtracts a fixed number from its input?",
-        "tier_2_partial": "calibrate can be a single line: return map(lambda x: x - CALIBRATION_OFFSET, stream). The returned map object is lazy — it won't compute anything until iterated.",
-        "tier_3_near_solution": "normalize: return map(lambda x: min(1.0, max(0.0, x)), stream). To chain them: normalize(calibrate(stream)) — each map wraps the previous iterator without materializing it."
+        "tier_1_nudge": "dLoss/dout_final = 2*(out_final-y)/N. Then push through sigmoid' and hidden.",
+        "tier_2_partial": "delta2 = (out_final-y) * out_final*(1-out_final) / N; dw2 = hidden.T @ delta2.",
+        "tier_3_near_solution": "delta1 = (delta2 @ w2.T) * h*(1-h); dw1 = x2d.T @ delta1; db = sum axis=0."
       },
       "verification_spec": {
-        "test_types": ["unit"],
+        "test_types": ["unit", "property"],
         "sample_test_cases": [
-          {
-            "description": "calibrate subtracts CALIBRATION_OFFSET from every value",
-            "input": "take(3, calibrate(iter([0.5, 0.3, 0.8])))",
-            "expected_behavior": "[0.45, 0.25, 0.75] (within float tolerance)"
-          },
-          {
-            "description": "normalize clamps negative values to 0.0",
-            "input": "take(1, normalize(iter([-0.05])))",
-            "expected_behavior": "[0.0]"
-          },
-          {
-            "description": "calibrate returns a lazy object, not a list",
-            "input": "type(calibrate(iter([0.5])))",
-            "expected_behavior": "not a list — has __iter__ and __next__ (is a map object or generator)"
-          },
-          {
-            "description": "chained pipeline calibrate -> normalize stays lazy",
-            "input": "pipeline = normalize(calibrate(signal_feed(seed=0))); take(5, pipeline)",
-            "expected_behavior": "list of 5 floats all in [0.0, 1.0]"
-          }
+          { "description": "gradient check via finite diff on one weight", "input": "perturb w2[0,0] by 1e-5, compare (loss+-)/2e-5", "expected_behavior": "matches backward dw2[0,0] within 1e-4" },
+          { "description": "shapes of grads equal weight shapes", "input": "random x,y", "expected_behavior": "dw1.shape==(2,2) etc" }
         ],
         "grading_rubric": [
-          { "criterion": "calibrate correctly subtracts CALIBRATION_OFFSET using map()", "points": 3 },
-          { "criterion": "normalize correctly clamps values using map()", "points": 3 },
-          { "criterion": "both return lazy objects (not lists)", "points": 3 },
-          { "criterion": "chaining works: normalize(calibrate(signal_feed())) is iterable", "points": 1 }
+          { "criterion": "gradient correctness via finite-diff", "points": 5 },
+          { "criterion": "correct chain through hidden layer", "points": 3 },
+          { "criterion": "no framework autograd used", "points": 2 }
         ],
-        "common_mistakes_to_flag": [
-          "wrapping the result in list() inside the function body, destroying laziness",
-          "using a list comprehension instead of map(), which also materializes the stream",
-          "forgetting that CALIBRATION_OFFSET is a module-level constant and redeclaring it locally"
-        ]
+        "common_mistakes_to_flag": ["forgot 1/N factor in MSE grad", "sigmoid derivative applied to post-activation not pre"]
       }
     },
 
     {
       "part_id": "part_3",
-      "title": "The Noise Gate",
-      "concept_focus": ["filter() with a predicate function", "composing filter into a pipeline"],
-      "difficulty_1_to_5": 2,
-      "depends_on_parts": ["part_1", "part_2"],
-      "narrative_tie_in": "Most readings coming off a radio telescope are just background noise — thermal static, interference from satellites, cosmic microwave background. The noise gate rejects any calibrated reading that falls below NOISE_FLOOR, letting only meaningful signal detections pass through to analysis. The analyst adds a filter stage to the pipeline.",
-      "learner_task_spec": "Implement a function above_noise_floor(stream) that takes any iterator of calibrated float readings and returns a new lazy iterator containing only those values that are strictly greater than NOISE_FLOOR. Must be implemented using filter() with a lambda or named predicate function — not a generator loop or list comprehension. Then implement a second function strong_signal(stream, threshold) that filters to values strictly greater than an arbitrary threshold passed as a parameter, making the filter stage reusable for different sensitivity settings. Both must be lazy.",
-      "starter_code_spec": {
-        "entities": [
-          {
-            "kind": "function",
-            "name": "above_noise_floor",
-            "signature": "def above_noise_floor(stream):",
-            "docstring_requirements": "State that it uses NOISE_FLOOR as the cutoff, that equality does not pass (strictly greater than), and that the result is lazy.",
-            "stub_behavior": "raise NotImplementedError"
-          },
-          {
-            "kind": "function",
-            "name": "strong_signal",
-            "signature": "def strong_signal(stream, threshold):",
-            "docstring_requirements": "State that threshold is a float parameter, that it filters to values strictly greater than threshold, and that the result is lazy.",
-            "stub_behavior": "raise NotImplementedError"
-          }
-        ]
-      },
-      "edge_cases_to_handle": [
-        "a reading equal to NOISE_FLOOR exactly (0.25) must NOT pass through — strictly greater than",
-        "a stream where every value is below the noise floor should yield an empty iterator without error",
-        "strong_signal with threshold=0.0 should pass all non-negative values",
-        "strong_signal with threshold=1.0 should pass no values from a normalized stream"
-      ],
-      "hints_tiered": {
-        "tier_1_nudge": "filter() takes a predicate function (returns True or False) and an iterable. It yields only the values for which the predicate returns True. How do you express 'strictly greater than NOISE_FLOOR' as a function?",
-        "tier_2_partial": "above_noise_floor: return filter(lambda x: x > NOISE_FLOOR, stream). The lambda returns True only for values that should pass through.",
-        "tier_3_near_solution": "strong_signal: return filter(lambda x: x > threshold, stream). Note that threshold must be captured in the lambda's closure — it's a parameter of the outer function, so Python captures it automatically."
-      },
-      "verification_spec": {
-        "test_types": ["unit"],
-        "sample_test_cases": [
-          {
-            "description": "values at exactly NOISE_FLOOR are rejected",
-            "input": "list(above_noise_floor(iter([0.25, 0.26, 0.24])))",
-            "expected_behavior": "[0.26]"
-          },
-          {
-            "description": "all-below-threshold stream returns empty",
-            "input": "list(above_noise_floor(iter([0.1, 0.2, 0.25])))",
-            "expected_behavior": "[]"
-          },
-          {
-            "description": "strong_signal with custom threshold",
-            "input": "list(strong_signal(iter([0.5, 0.7, 0.3, 0.9]), 0.6))",
-            "expected_behavior": "[0.7, 0.9]"
-          },
-          {
-            "description": "above_noise_floor is lazy — returns a filter object",
-            "input": "type(above_noise_floor(iter([0.5])))",
-            "expected_behavior": "not a list — has __iter__ and __next__"
-          },
-          {
-            "description": "full chain: signal_feed -> calibrate -> normalize -> above_noise_floor is iterable",
-            "input": "take(10, above_noise_floor(normalize(calibrate(signal_feed(seed=7)))))",
-            "expected_behavior": "list of up to 10 floats, all strictly greater than 0.25"
-          }
-        ],
-        "grading_rubric": [
-          { "criterion": "above_noise_floor correctly uses NOISE_FLOOR as strict threshold via filter()", "points": 3 },
-          { "criterion": "strong_signal correctly parameterizes the threshold", "points": 3 },
-          { "criterion": "both return lazy objects", "points": 2 },
-          { "criterion": "strict inequality (not >=) is correctly enforced", "points": 2 }
-        ],
-        "common_mistakes_to_flag": [
-          "using >= instead of > for the threshold check, letting noise-floor-equal values pass",
-          "implementing as a generator loop or list comprehension instead of filter()",
-          "capturing threshold incorrectly in the lambda if restructured into a nested function"
-        ]
-      }
-    },
-
-    {
-      "part_id": "part_4",
-      "title": "The Nightly Aggregation",
-      "concept_focus": ["functools.reduce() for aggregation", "when and why to use reduce vs. built-ins"],
+      "title": "The Morning Ledger of Errors",
+      "concept_focus": ["gradient descent", "training loop"],
       "difficulty_1_to_5": 3,
-      "depends_on_parts": ["part_1", "part_2", "part_3"],
-      "narrative_tie_in": "Once the filtered signal stream is gated, the analyst must collapse a finite window of readings into summary statistics for the nightly report: the total accumulated signal energy (sum), the peak reading (maximum), and a running product representing a joint probability estimate. Each of these must be computed using reduce(), so the analyst sees directly how a single binary operation applied repeatedly can produce different aggregations.",
-      "learner_task_spec": "Implement three aggregation functions, each taking a finite list of floats (already materialized from the pipeline) and returning a single value, each using functools.reduce() as the core computation mechanism. (1) total_energy(readings) — returns the sum of all values using reduce() with an addition lambda; must return 0.0 for an empty list using reduce's initializer parameter. (2) peak_reading(readings) — returns the maximum value using reduce() with a max-of-two lambda; must raise ValueError with message 'No readings above noise floor' for an empty list (do not use the initializer parameter here — instead check length before calling reduce). (3) joint_probability(readings) — returns the product of all values using reduce() with a multiplication lambda; must return 1.0 for an empty list using reduce's initializer parameter. All three must use reduce() explicitly — not sum(), max(), or math.prod().",
+      "depends_on_parts": ["part_1", "part_2"],
+      "narrative_tie_in": "Aurelia: 'Run the cranks 500 times on this lever pattern. Watch the ledger error shrink.'",
+      "learner_task_spec": "Implement train(net, X, Y, lr=0.1, epochs=500) that loops: forward, backward, update weights via w -= lr*grad, and returns list of loss per epoch. Use provided toy X (4x2 XOR-ish), Y (4x1). Print/return final loss.",
       "starter_code_spec": {
         "entities": [
-          {
-            "kind": "function",
-            "name": "total_energy",
-            "signature": "def total_energy(readings):",
-            "docstring_requirements": "State that it sums via reduce(), returns 0.0 for empty input, and does not use the built-in sum().",
-            "stub_behavior": "raise NotImplementedError"
-          },
-          {
-            "kind": "function",
-            "name": "peak_reading",
-            "signature": "def peak_reading(readings):",
-            "docstring_requirements": "State that it finds the maximum via reduce(), raises ValueError with message 'No readings above noise floor' for empty input, and does not use the built-in max().",
-            "stub_behavior": "raise NotImplementedError"
-          },
-          {
-            "kind": "function",
-            "name": "joint_probability",
-            "signature": "def joint_probability(readings):",
-            "docstring_requirements": "State that it multiplies all values via reduce(), returns 1.0 for empty input, and does not use math.prod().",
-            "stub_behavior": "raise NotImplementedError"
-          }
+          { "kind": "function", "name": "train", "signature": "train(net, X, Y, lr=0.1, epochs=500) -> list", "docstring_requirements": "Describe update rule and return", "stub_behavior": "raise NotImplementedError" }
         ]
       },
-      "edge_cases_to_handle": [
-        "empty list to total_energy must return 0.0 (not crash) — use the initializer argument of reduce()",
-        "empty list to peak_reading must raise ValueError with the exact message 'No readings above noise floor'",
-        "empty list to joint_probability must return 1.0 (not crash) — use the initializer argument of reduce()",
-        "single-element list to each function should return that element (or 1.0 * element for joint_probability)",
-        "joint_probability with values all less than 1.0 will produce a very small float — this is expected, not a bug"
-      ],
+      "edge_cases_to_handle": ["loss should decrease monotonically-ish; if explode, lr note", "X,Y as provided constants in scaffold or main"],
       "hints_tiered": {
-        "tier_1_nudge": "reduce(f, [a, b, c, d]) computes f(f(f(a, b), c), d) — it collapses a list using a two-argument function repeatedly. What two-argument function produces a sum? A maximum? A product?",
-        "tier_2_partial": "reduce(lambda a, b: a + b, readings, 0.0) sums the list and returns 0.0 if it's empty — the third argument to reduce() is the initial value used when the list is empty. For peak_reading, do NOT provide an initializer; instead guard with 'if not readings: raise ValueError(...)' before calling reduce.",
-        "tier_3_near_solution": "total_energy: return reduce(lambda a, b: a + b, readings, 0.0). peak_reading: if not readings: raise ValueError('No readings above noise floor'); return reduce(lambda a, b: a if a > b else b, readings). joint_probability: return reduce(lambda a, b: a * b, readings, 1.0)."
+        "tier_1_nudge": "For each epoch: out = net.forward(X); grads = net.backward(X,Y); subtract lr*grad from each param.",
+        "tier_2_partial": "loss = np.mean((out[-1]-Y)**2); append to list before update.",
+        "tier_3_near_solution": "net.w1 -= lr*grads['dw1']; ... loop epochs."
       },
       "verification_spec": {
-        "test_types": ["unit"],
+        "test_types": ["integration"],
         "sample_test_cases": [
-          {
-            "description": "total_energy sums correctly",
-            "input": "total_energy([0.5, 0.3, 0.8])",
-            "expected_behavior": "1.6 (within float tolerance 1e-9)"
-          },
-          {
-            "description": "total_energy on empty list returns 0.0",
-            "input": "total_energy([])",
-            "expected_behavior": "0.0"
-          },
-          {
-            "description": "peak_reading returns maximum",
-            "input": "peak_reading([0.5, 0.9, 0.3])",
-            "expected_behavior": "0.9"
-          },
-          {
-            "description": "peak_reading on empty list raises ValueError with correct message",
-            "input": "peak_reading([])",
-            "expected_behavior": "raises ValueError, message is exactly 'No readings above noise floor'"
-          },
-          {
-            "description": "joint_probability on empty list returns 1.0",
-            "input": "joint_probability([])",
-            "expected_behavior": "1.0"
-          },
-          {
-            "description": "joint_probability on single element returns that element",
-            "input": "joint_probability([0.6])",
-            "expected_behavior": "0.6"
-          }
+          { "description": "loss after 500 epochs < 0.1 on toy XOR", "input": "provided X,Y, lr=0.1", "expected_behavior": "final loss < 0.1" },
+          { "description": "returned list length equals epochs", "input": "epochs=10", "expected_behavior": "len(losses)==10" }
         ],
         "grading_rubric": [
-          { "criterion": "all three functions use reduce() explicitly (not sum/max/prod)", "points": 3 },
-          { "criterion": "correct initializer usage in total_energy and joint_probability for empty-list case", "points": 3 },
-          { "criterion": "peak_reading raises ValueError with exact message for empty list", "points": 2 },
-          { "criterion": "all three return correct values on non-empty lists", "points": 2 }
+          { "criterion": "loss decreases over training", "points": 4 },
+          { "criterion": "weights actually updated from grads", "points": 3 },
+          { "criterion": "function reusable for any TinyNet instance", "points": 1 }
         ],
-        "common_mistakes_to_flag": [
-          "using sum() or max() instead of reduce() — should be flagged by autograder checking for those built-in names in the function body via AST inspection if possible",
-          "providing an initializer of 0.0 to peak_reading — this makes max over floats return 0.0 on an empty list instead of raising, silently breaking the contract",
-          "using -math.inf as a manual initial value for peak_reading instead of the specified ValueError guard — acceptable but must still be flagged as 'not what the spec asked for'"
-        ]
-      }
-    },
-
-    {
-      "part_id": "part_5",
-      "title": "The Overnight Run",
-      "concept_focus": ["composing a full lazy pipeline", "integrating all prior stages"],
-      "difficulty_1_to_5": 4,
-      "depends_on_parts": ["part_1", "part_2", "part_3", "part_4"],
-      "narrative_tie_in": "It's finally time to run the full pipeline before dawn. The Signal Analyst wires together every stage built so far into a single function that processes a configurable number of samples end-to-end and returns the nightly report as a dictionary. This is the morning log entry.",
-      "learner_task_spec": "Implement run_pipeline(num_samples, seed=None) that: (1) creates an infinite signal_feed with the given seed; (2) passes it through calibrate(); (3) passes the result through normalize(); (4) passes the result through above_noise_floor(); (5) uses take() to materialize exactly num_samples values from the filtered stream into a list called clean_readings; (6) computes and returns a dictionary with keys 'samples_collected' (int — length of clean_readings), 'total_energy' (float — from total_energy()), 'peak_reading' (float — from peak_reading(), or None if clean_readings is empty), and 'joint_probability' (float — from joint_probability()). The pipeline chain in steps 1-4 must remain lazy until take() is called in step 5. The function must handle the case where clean_readings is empty (peak_reading raises — catch it and store None).",
-      "starter_code_spec": {
-        "entities": [
-          {
-            "kind": "function",
-            "name": "run_pipeline",
-            "signature": "def run_pipeline(num_samples, seed=None):",
-            "docstring_requirements": "Full parameter and return contract: describe each pipeline stage in order, describe the returned dictionary keys and their types, and note the empty-stream handling.",
-            "stub_behavior": "raise NotImplementedError"
-          }
-        ]
-      },
-      "edge_cases_to_handle": [
-        "if the noise gate rejects so many readings that take() has consumed a very large number of raw samples — this is expected behavior, not an infinite loop bug, as long as signal_feed is truly infinite",
-        "num_samples=0 should return a dictionary with samples_collected=0, total_energy=0.0, peak_reading=None, joint_probability=1.0",
-        "the pipeline must not store all raw samples in memory — only clean_readings (post-filter) should be materialized",
-        "seed must propagate correctly so results are reproducible"
-      ],
-      "hints_tiered": {
-        "tier_1_nudge": "Think of this function as physically bolting together the rack of filters you built in earlier parts. Each stage wraps the previous one. Where exactly in the chain should take() be called, and why not earlier?",
-        "tier_2_partial": "raw = signal_feed(seed=seed); cal = calibrate(raw); norm = normalize(cal); gated = above_noise_floor(norm); clean_readings = take(num_samples, gated). At this point clean_readings is a regular Python list and the lazy chain is exhausted for those n items.",
-        "tier_3_near_solution": "For the peak_reading key: try/except the ValueError from peak_reading(clean_readings) and store None in the except branch. Everything else is direct calls to the part_4 functions with clean_readings as input."
-      },
-      "verification_spec": {
-        "test_types": ["unit", "integration"],
-        "sample_test_cases": [
-          {
-            "description": "run_pipeline returns a dict with all four required keys",
-            "input": "run_pipeline(100, seed=42)",
-            "expected_behavior": "returned value is a dict with keys 'samples_collected', 'total_energy', 'peak_reading', 'joint_probability'"
-          },
-          {
-            "description": "samples_collected equals num_samples when stream is rich enough",
-            "input": "run_pipeline(50, seed=0)['samples_collected']",
-            "expected_behavior": "50"
-          },
-          {
-            "description": "peak_reading is None when num_samples=0",
-            "input": "run_pipeline(0, seed=1)['peak_reading']",
-            "expected_behavior": "None"
-          },
-          {
-            "description": "total_energy is 0.0 when num_samples=0",
-            "input": "run_pipeline(0)['total_energy']",
-            "expected_behavior": "0.0"
-          },
-          {
-            "description": "all clean_readings values in the pipeline are above NOISE_FLOOR",
-            "input": "internal check: instrument run_pipeline to inspect clean_readings",
-            "expected_behavior": "every value in clean_readings > NOISE_FLOOR (0.25)"
-          },
-          {
-            "description": "seeded results are reproducible",
-            "input": "run_pipeline(200, seed=99) called twice",
-            "expected_behavior": "both calls return identical dictionaries"
-          }
-        ],
-        "grading_rubric": [
-          { "criterion": "pipeline stages composed in the correct order (feed -> calibrate -> normalize -> filter -> take)", "points": 4 },
-          { "criterion": "lazy chain not materialized before take()", "points": 2 },
-          { "criterion": "correct dictionary structure with all four keys", "points": 2 },
-          { "criterion": "empty stream handled correctly — peak_reading is None, others have correct neutral values", "points": 1 },
-          { "criterion": "seeded reproducibility works end-to-end", "points": 1 }
-        ],
-        "common_mistakes_to_flag": [
-          "calling take() or list() on the stream before the filter stage, materializing noise readings into memory",
-          "catching the wrong exception type (e.g. bare Exception instead of ValueError) in the peak_reading guard",
-          "forgetting to pass seed through to signal_feed, making results non-reproducible"
-        ]
+        "common_mistakes_to_flag": ["updating before computing loss", "hardcoding X inside train instead of param"]
       }
     }
   ],
 
   "global_verification_strategy": {
-    "autograder_approach": "Parts 1-4 are fully unit-testable with fixed random seeds. Each test module seeds random.seed(42) in a setUp/fixture before each test. Part 5 is an integration test that checks all four dictionary keys and validates that the pipeline produces values consistent with the stage invariants established in parts 1-4. An optional AST-level check for part 4 can scan for use of sum(), max(), or math.prod() in the function bodies and emit a warning if found, flagging possible bypass of the reduce() requirement.",
-    "test_harness_notes": "Tests for each part should be runnable independently so learners can check their work part by part. A shared conftest.py (or equivalent test setup) should import peregrine and seed random before each test. Part 5 integration tests should import run_pipeline and verify against a reference output computed offline with seed=42 and num_samples=200. The test for laziness (checking that functions return non-list iterables) should use hasattr(result, '__next__') rather than isinstance checks to stay robust across map objects and generator objects.",
-    "manual_review_needed_for": [
-      "Part 2 and 3: confirming calibrate and normalize use map() and filter() rather than generator expressions — a runtime laziness test catches materialization but not the use of list comprehensions that happen to be written as generator expressions; an AST scan or brief manual read is more reliable",
-      "Part 4: confirming reduce() is used and not bypassed with sum()/max()/prod() equivalents — AST scan is preferred but manual review is a fallback",
-      "Part 5: confirming the lazy chain order is correct by code inspection, since a test can only observe outputs, not internal wiring"
-    ]
+    "autograder_approach": "Deterministic with np.random.seed in tests for weight init; part 2 uses finite-diff gradient check; part 3 asserts loss threshold.",
+    "test_harness_notes": "Seed numpy before constructing TinyNet in tests; tolerance 1e-4 for grad checks.",
+    "manual_review_needed_for": ["clarity of backprop math comments in code (rubric read)"]
   },
 
   "optional_extensions": [
-    {
-      "title": "The Interference Window",
-      "description": "Add a new pipeline stage interference_filter(stream, window_size) that uses a generator with yield to compute a sliding window average over the stream and yields only values whose raw value exceeds the window average by at least 0.1, detecting 'spikes' above local baseline. Requires the learner to maintain internal state inside a generator, introducing stateful generators as a natural extension of part 1.",
-      "difficulty_1_to_5": 3
-    },
-    {
-      "title": "The Dual-Band Comparison",
-      "description": "Run two parallel pipelines with different NOISE_FLOOR thresholds (using strong_signal() from part 3 instead of above_noise_floor()) and use zip() to pair up their outputs sample-by-sample, then compute the correlation between the two filtered streams using reduce(). Reinforces polymorphic pipeline composition and introduces zip() as a lazy combinator.",
-      "difficulty_1_to_5": 3
-    },
-    {
-      "title": "Generator Expressions vs. map/filter",
-      "description": "Rewrite calibrate, normalize, and above_noise_floor using generator expressions instead of map()/filter(), then use the take() function to confirm the outputs are identical. Write a brief in-code comment explaining when you would prefer one form over the other. This is a reflection/analysis task that deepens understanding of the relationship between the two styles.",
-      "difficulty_1_to_5": 2
-    }
+    { "title": "Different Activation", "description": "Swap sigmoid for tanh in a copy of TinyNet and observe training speed change on same toy set", "difficulty_1_to_5": 2 },
+    { "title": "Deeper Brass", "description": "Add a third layer to TinyNet and extend backward manually", "difficulty_1_to_5": 4 }
   ],
 
   "style_guide_for_downstream_agents": {
-    "tone": "Quiet, atmospheric night-shift engineering — precise and unembellished, with dry wit allowed sparingly. Never use exclamation points in problem descriptions. Frame stakes as professional interest, not urgency or peril. The analyst is competent and calm, not panicked.",
-    "code_style": "PEP 8 throughout. snake_case for all functions and variables. UPPER_SNAKE_CASE for module-level constants. No type hints in starter code (to avoid adding cognitive load not in scope). Docstrings on every public function using the single-paragraph style (no Google/NumPy sectioned style). Lambdas should be kept to one expression; if a lambda would exceed ~40 characters, use a named inner function instead.",
+    "tone": "Apprentice-mentor steampunk, code-along, precise under flavor",
+    "code_style": "PEP8, numpy snake_case, PascalCase class, docstrings on public methods",
     "consistency_rules": [
-      "Function names signal_feed, bounded_signal_feed, calibrate, normalize, above_noise_floor, strong_signal, total_energy, peak_reading, joint_probability, and run_pipeline must be used verbatim by every downstream agent across descriptions, code, and tests — do not rename, alias, or retheme them.",
-      "Constants NOISE_FLOOR (0.25) and CALIBRATION_OFFSET (0.05) must appear at module level in peregrine.py and must not be redefined locally in any downstream agent's code or tests.",
-      "The helper function take(n, iterable) must be provided and used consistently — downstream agents must not substitute islice directly in learner-facing code examples, as take() is the learner's interface to consuming lazy streams throughout the set.",
-      "The word 'lazy' (not 'deferred', 'on-demand', or 'streaming') is the preferred learner-facing vocabulary for describing generator and map/filter behavior — use it consistently across all description and hint text.",
-      "Error message for peak_reading on empty input must be exactly the string 'No readings above noise floor' — tests check this string literally."
+      "Class TinyNet, methods forward/backward, function train, provided sigmoid must be verbatim across agents.",
+      "Use 'lever' for input, 'crank' for gradient step, 'ledger' for loss in all text.",
+      "No PyTorch/TensorFlow references in any agent output."
     ]
   }
 }

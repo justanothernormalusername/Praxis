@@ -11,6 +11,10 @@ app = FastAPI()
 load_dotenv()
 provider = "HACKCLUBAI"  # Choose HACKCLUBAI or OPENROUTER
 
+# anthropic/claude-sonnet-4.6
+chat_model = "tencent/hy3:free"
+plan_model = "tencent/hy3:free"
+
 if provider == "HACKCLUBAI":
     API_KEY = os.getenv("HACKCLUBAI_API_KEY")
     URL = "https://ai.hackclub.com/proxy/v1/chat/completions"
@@ -60,25 +64,24 @@ async def chatbot_handler(content: Content) -> dict:
             }
         }
     }
-    
-    model = "openai/gpt-oss-120b"  # anthropic/claude-sonnet-4.6
 
-    response = await chat_with_ai(model, content.messages, [conversation_end_tool])
+    response = await chat_with_ai(chat_model, content.messages, [conversation_end_tool])
     status = "running"
-    response_output = response.json()["choices"][0]["message"]["content"]
     learning_details = ""
 
     # Error handling
     if "error" in response.json():
         status = "error"
         response_output = response.json()["error"]["message"]
-
+    else:
+        response_output = response.json()["choices"][0]["message"]["content"]
+    
     # Handle tool calling
-    elif response.json()["choices"][0]["finish_reason"] == "tool_calls":
+    if response.json().get("choices")[0]["finish_reason"] is not None and response.json()["choices"][0]["finish_reason"] == "tool_calls":
         status = "done"
         print(response.json())
         learning_details = json.loads(response.json()["choices"][0]["message"]["tool_calls"][0]["function"]["arguments"])["learning_details"]
-    
+
     return {"status": status, "response": response_output, "learning_details": learning_details}
 
 
@@ -87,20 +90,24 @@ class Details(BaseModel):
 
 @app.post("/plan")
 async def orchestrator(details: Details) -> str:
-    instructions = "You are a model deployed as part of a learning app called Praxis. The learning app specifically focuses on programming, by generating engaging, stylized, homework like problem sets to exercise and teach techniques and content. The user will typically come in with only a vague idea of what they want to accomplish or learn, and a previous agent has already clarified the user's end learning goal and preference. Its summary will be provided to you, your goal is to provide a detailed spec to pass onto future agents that will write the exact descriptions, code, story and verification. Answer only in a json format with 4 specific sections: description, code, story and verification. Each will have a part for each section of the final problem set. You will be deciding how many parts the problem set will be, and the general title for each seperated section."
+    instructions = "You are a model deployed as part of a learning app called Praxis. The learning app specifically focuses on programming, by generating engaging, stylized, homework like problem sets to exercise and teach techniques and content. The user will typically come in with only a vague idea of what they want to accomplish or learn, and a previous agent has already clarified the user's end learning goal and preference. Its summary will be provided to you, your goal is to provide a detailed spec to pass onto future agents that will write the exact descriptions, code, story and verification. Answer only in a json format with 4 specific sections: description, code, story and verification. Each will have a part for each section of the final problem set. You will be deciding how many parts the problem set will be, and the general title for each separated section."
     
     with open("praxis_orchestrator_prompt.md") as f:
-        prompt = f.read()
+        instructions = f.read()
 
     content = [
         {"role": "system", "content": instructions},
-        {"role": "user", "content": prompt}
+        {"role": "user", "content": details.learning_details}
     ]
-    
-    model = "openai/gpt-oss-120b"  # anthropic/claude-sonnet-4.6
+    print(details.learning_details)
+    response = await chat_with_ai(plan_model, content, [])
 
-    response = await chat_with_ai(model, content, [])
+    if "error" in response.json():
+        return response.json()["error"]["message"]
+    
     return response.json()["choices"][0]["message"]["content"]
+
+    
 
 
 

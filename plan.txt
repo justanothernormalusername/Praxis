@@ -1,3 +1,19 @@
+TODOLISTRN
+force json output formatting
+refine system prompt
+
+next:
+async http calls for each agent type
+client processes the spec and splits it between each agent call
+agent call for intro
+all agents called once per pset section
+assemble
+
+UI?
+
+*do later: refine chatbot prompt
+
+
 TODO
 
 1. openrouter
@@ -45,3 +61,5 @@ refer to MITx problem sets as examples
 
 will need web access (search agent)
 coding agent
+
+

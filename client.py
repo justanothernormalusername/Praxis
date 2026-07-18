@@ -2,6 +2,7 @@ import requests
 from collections.abc import Callable
 from typing import Any
 import inspect
+import shlex
 
 class CommandRegistry:
     def __init__(self) -> None:
@@ -16,7 +17,7 @@ class CommandRegistry:
         return decorator
 
     def parse(self, command: str) -> str:
-        segmented_cmd = command.split()
+        segmented_cmd = shlex.split(command)
         if not segmented_cmd:
             return "No command entered"
         func = self._commands.get(segmented_cmd[0])
