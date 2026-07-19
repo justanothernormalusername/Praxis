@@ -1,8 +1,10 @@
 12:35, 25m
-TODOLISTRN
-refine system prompt
 
-next:
+7:22, 4h47
+
+9:36 6h40
+TODOLISTRN
+
 async http calls for each agent type
 client processes the spec and splits it between each agent call
 agent call for intro
@@ -11,7 +13,9 @@ assemble
 
 UI?
 
-*do later: refine chatbot prompt
+*do later: 
+refine chatbot prompt
+refine orchestrator prompt
 
 Testing prompt:
 User has prior experience with neural networks (not a complete beginner). Topic: building a small feedforward neural network with a small number of neurons and implementing backpropagation from scratch. Language: Python. Libraries: numpy allowed, but no large deep learning frameworks like PyTorch/TensorFlow. Style: storytelling narrative that wraps a hands-on implementation challenge (code-along style). Learning goal: reinforce understanding of forward pass and backprop math by implementing it manually. Keep the problem set concise and approachable.

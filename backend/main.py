@@ -27,8 +27,6 @@ else:
 async def chat_with_ai(model: str, content: list, tools: list | None = None, response_format: dict | None = None) -> requests.models.Response:
     if tools is None:
         tools = []
-    if response_format is None:
-        response_format = {}
     def make_request() -> requests.models.Response:
         return requests.post(
             url = URL,
@@ -40,6 +38,18 @@ async def chat_with_ai(model: str, content: list, tools: list | None = None, res
                 "response_format": response_format
             }
         )
+    if response_format is None:
+        response_format = {}
+        def make_request() -> requests.models.Response:
+            return requests.post(
+                url = URL,
+                headers = {"Authorization": f"Bearer {API_KEY}"},
+                json = {
+                    "model": model,
+                    "messages": content,
+                    "tools": tools
+                }
+            )
     response = await asyncio.to_thread(make_request)
     return response
 
@@ -79,8 +89,13 @@ async def chatbot_handler(content: Content) -> dict:
     else:
         response_output = response.json()["choices"][0]["message"]["content"]
     
+    choices = response.json().get("choices")
+    if choices is None:
+        print(response.json())
+        raise TypeError
+
     # Handle tool calling
-    if response.json().get("choices")[0]["finish_reason"] is not None and response.json()["choices"][0]["finish_reason"] == "tool_calls":
+    if choices[0]["finish_reason"] is not None and response.json()["choices"][0]["finish_reason"] == "tool_calls":
         status = "done"
         print(response.json())
         learning_details = json.loads(response.json()["choices"][0]["message"]["tool_calls"][0]["function"]["arguments"])["learning_details"]
@@ -189,6 +204,7 @@ async def orchestrator(details: Details) -> str:
     }
 
     print(details.learning_details)
+
     response = await chat_with_ai(plan_model, content, response_format=response_format)
 
     if "error" in response.json():
@@ -196,9 +212,20 @@ async def orchestrator(details: Details) -> str:
     
     return response.json()["choices"][0]["message"]["content"]
 
-    
 
+class AgentRequestDetails(BaseModel):
+    title: str
+    details: str
+    language: str
+    part_details: str
 
+@app.post("/write")
+async def write(details: AgentRequestDetails) -> str:
+    return ""
+
+@app.post("/code")
+async def code(details: AgentRequestDetails) -> str:
+    return ""
 
 response_format = {
     'id': 'gen-1782648906-K7oEDMaPpinEye24z43b', 
