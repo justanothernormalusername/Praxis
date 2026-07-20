@@ -53,11 +53,13 @@ async def deploy_agents(spec: dict) -> dict:
         "parts": [
             {
                 "title": str,
+                "details": str,
                 "write": requests.models.Response,
                 "code": requests.models.Response
             },
             {
                 "title": str,
+                "details": str,
                 "write": requests.models.Response,
                 "code": requests.models.Response
             },
@@ -66,13 +68,11 @@ async def deploy_agents(spec: dict) -> dict:
     }
     """
     def call_agents() -> dict:
-        def make_request(type: str, request_json: dict) -> requests.models.Response:
+        def make_request(type: str, request_json: dict) -> dict:
             if type == "write":
-                print(request_json)
-                return requests.post("http://127.0.0.1:8000/write", json=request_json)
+                return requests.post("http://127.0.0.1:8000/write", json=request_json).json()
             elif type == "code":
-                print(request_json)
-                return requests.post("http://127.0.0.1:8000/code", json=request_json)
+                return requests.post("http://127.0.0.1:8000/code", json=request_json).json()
             else:
                 raise TypeError("Type argument must be \"write\" or \"code\"")
         
@@ -82,22 +82,17 @@ async def deploy_agents(spec: dict) -> dict:
         }
 
         for section in spec["parts"]:
-            write_request_json = {
+            agent_request_json = {
                 "title": spec["title"],
                 "details": spec["details"],
                 "language": spec["language"],
-                "part_details": section["description_agent_notes"]
+                "part_title": section["title"],
+                "writer_details": section["description_agent_notes"],
+                "coder_details": section["coding_agent_notes"]
             }
 
-            code_request_json = {
-                "title": spec["title"],
-                "details": spec["details"],
-                "language": spec["language"],
-                "part_details": section["coding_agent_notes"]
-            }
-
-            section_output["write"].append(asyncio.to_thread(make_request, "write", write_request_json))
-            section_output["code"].append(asyncio.to_thread(make_request, "code", code_request_json))
+            section_output["write"].append(asyncio.to_thread(make_request, "write", agent_request_json))
+            section_output["code"].append(asyncio.to_thread(make_request, "code", agent_request_json))
         return section_output
 
     # Function outputs dict of lists of coroutines
@@ -116,6 +111,7 @@ async def deploy_agents(spec: dict) -> dict:
         "parts": [
             {
                 "title": spec["parts"][i]["title"],
+                "details": spec["parts"][i]["details"],
                 "write": completed_write[i],
                 "code": completed_code[i]
             }
@@ -123,6 +119,49 @@ async def deploy_agents(spec: dict) -> dict:
         ]
     }
 
+
+async def deploy_agents(spec: dict) -> dict:
+    """
+    Returns a dict in this format:
+    {
+        "title": str,
+        "details": str,
+        "language": str,
+        "estimated_total_time_minutes": int,
+        "parts": [
+            {
+                "title": str,
+                "details": str,
+                "write": requests.models.Response,
+                "code": requests.models.Response
+            },
+            {
+                "title": str,
+                "details": str,
+                "write": requests.models.Response,
+                "code": requests.models.Response
+            },
+            ...
+        ]
+    }
+    """
+
+
+    return {
+        "title": spec["title"],
+        "details": spec["details"],
+        "language": spec["language"],
+        "estimated_total_time_minutes": spec["estimated_total_time_minutes"],
+        "parts": [
+            {
+                "title": spec["parts"][i]["title"],
+                "details": spec["parts"][i]["details"],
+                "write": completed_write[i],
+                "code": completed_code[i]
+            }
+            for i in range(len(spec["parts"]))
+        ]
+    }
 
 registry = CommandRegistry()
 
@@ -141,7 +180,12 @@ def build(spec: dict) -> None:
     if spec == "":
         with open("test_spec.json", "r") as file:
             spec = json.loads(file.read())
+            
     build_output = asyncio.run(deploy_agents(spec))
+
+    with open("out.txt", "w", encoding="utf-8") as file:
+        json.dump(build_output, file, indent=4, ensure_ascii=False)
+
     print(build_output)
 
 instructions = "You are a model deployed as part of a learning app called Praxis. The learning app specifically focuses on programming, by generating engaging, stylized, homework like problem sets to exercise and teach techniques and content. The user will typically come in with only a vague idea of what they want to accomplish or learn, and your goal is to clarify the user's end learning goal and preference as accurately and consise as possible. The topic must be narrow enough to fit into a simple problem set, for example: a specific algorithm, an introduction to an advanced concept. Whole units or subfields are too vague. You need to make sure the content fits the experience of the user so previous knowledge must be clarified. For learning preference, the style of the problem set (narrative, storytelling, real-world, implementation, interview, etc.) must also be clarified. You are the first interaction the user will experience on this app. This means asking clarifying questions and suggesting options that may be helpful for the user to organize their thoughts. The chat between you and the user should stay friendly and conversational. This means that responses should not be structured in lists, bullets or charts, etc. Keep responses consise in sentence form, and questions should only be asked one at a time. Suggestions can be made, such as suggesting information to provide, and this can include more than one request. All in all, the secondary goal is to chat with the user and keep the enviornment approachable and friendly, making sure not to overwhelm the user with information and questions. Lastly, before finalizing the conversation, ask a final confirmation with all the information you have to ensure no assumptions are being made and everything is accurate. This way the user can correct any invalid information."

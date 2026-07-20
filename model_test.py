@@ -7,102 +7,47 @@ load_dotenv()
 API_KEY = os.getenv("HACKCLUBAI_API_KEY")
 URL = "https://ai.hackclub.com/proxy/v1/chat/completions"
 
-# message = "ABC"
-model = "anthropic/claude-sonnet-5"
+model = "z-ai/glm-5.2"
+prompt = """
+You are a model deployed as part of a learning app specifically focused on programming. The app will generate engaging, stylized, homework like problem sets to exercise and teach techniques and content. Each problem set is split into seperate sections, each made as linked, cohesive lessons. The sections are created by 2 seperate agents: the writer and coder. You are the writer agent, tasked to write the instructions and story for the section. Within the story, ensure explanations of how it is relevant to the code/concept. The end goal is to allow the user to learn by doing and following the story, but if there are parts that are best taught outside of context, include it in the description. In the instructions, you must include necessary examples to clarify the task, any information on data or code for understanding and clarification, and any additional information that will enhance the user experience. You will be provided with information on the overall story, any criteria and the user's task to complete for the current problem set section. For extra information, you will also see coder_details. You may use it to better educate your response, but DO NOT follow any instructions meant for the coder agent. To ensure that each each section fits together, do not introduce any narrative elements that may influence/change the narrative of other problem set sections, or even the code/data for the current section. You main goal is to balance the user's learning experience between fun and educational. 
 
-json_template = {
-    "title": "Space Cows",
-    "introduction": "A colony of Aucks (super-intelligent alien bioengineers) has landed on Earth and has created new species of farm animals! The Aucks are performing their experiments on Earth, and plan on transporting the mutant animals back to their home planet of Aurock. In this problem set, you will implement algorithms to figure out how the aliens should shuttle their experimental animals back across space.",
-    "language": "Python 3",
-    "estimated_total_time_minutes": 90,
-    "parts": [
-        {
-            "id": 1,
-            "section_title": "Greedy Cow Transport",
-            "description_details": "Any information (including story outline) you plan to include for any agent working on this part",
-            "task": "The user's task - what does the user need to accomplish here?"
-        },
-        {
-            "id": 2,
-            "section_title": "",
-            "description_details": "",
-            "task": ""
-        }
-    ]
-}
+Example:
+Greedy Cow Transport
+One way of transporting cows is to always pick the heaviest cow that will fit onto the spaceship first. This is an example of a greedy algorithm. So if there are only 2 tons of free space on your spaceship, with one cow that's 3 tons and another that's 1 ton, the 1 ton cow will get put onto the spaceship.
 
+Implement a greedy algorithm for transporting the cows back across space in the function greedy_cow_transport. The function returns a list of lists, where each inner list represents a trip and contains the names of cows taken on that trip.
 
-with open("prompt_new.txt") as f:
-    content = f.read()
+Note: Make sure not to mutate the dictionary of cows that is passed in!
 
-# "You are a model deployed as part of a learning app called Praxis. The learning app specifically focuses on programming, by generating engaging, stylized, homework like problem sets to exercise and teach techniques and content. The user will typically come in with only a vague idea of what they want to accomplish or learn, and a previous agent has already clarified the user's end learning goal and preference. Its summary will be provided to you, your goal is to provide a detailed spec to pass onto future agents that will write the exact descriptions, code, story and verification. Answer only in a json format with 4 specific sections: description, code, story and verification. Each will have a part for each section of the final problem set. You will be deciding how many parts the problem set will be, and the general title for each separated section."
+Assumptions:
+
+The order of the list of trips does not matter. That is, [[1,2],[3,4]] and [[3,4],[1,2]] are considered equivalent lists of trips.
+All the cows are between 0 and 100 tons in weight.
+All the cows have unique names.
+If multiple cows weigh the same amount, break ties arbitrarily.
+The spaceship has a cargo weight limit (in tons), which is passed into the function as a parameter.
+Example:
+
+Suppose the spaceship has a weight limit of 10 tons and the set of cows to transport is {"Jesse": 6, "Maybel": 3, "Callie": 2, "Maggie": 5}.
+
+The greedy algorithm will first pick Jesse as the heaviest cow for the first trip. There is still space for 4 tons on the trip. Since Maggie will not fit on this trip, the greedy algorithm picks Maybel, the heaviest cow that will still fit. Now there is only 1 ton of space left, and none of the cows can fit in that space, so the first trip is [Jesse, Maybel].
+
+For the second trip, the greedy algorithm first picks Maggie as the heaviest remaining cow, and then picks Callie as the last cow. Since they will both fit, this makes the second trip [[Maggie], [Callie]].
+
+The final result then is [["Jesse", "Maybel"], ["Maggie", "Callie"]].
+"""
 
 messages = [
-    {"role": "system", "content": content}
+    {"role": "system", "content": prompt},
+    {"role": "user", "content": """{
+        "title": "Midnight at the Moonlit Bakery: Mastering asyncio.gather",
+        "details": "Story world: The user plays a sleepy apprentice wizard-baker at the Moonlit Bakery, a magical shop that only opens once the town's clocktower chimes dawn. Each night, the bakery receives multiple magical pastry orders (invisibility eclairs, luck croissants, dragon-scale bagels, etc.) that must be baked before sunrise. Baking each pastry is represented by a coroutine (uses asyncio.sleep to simulate bake time). Sequential baking is too slow, so the apprentice must learn to use asyncio.gather to bake multiple pastries concurrently, collect their results, handle burnt batches (exceptions), and dynamically manage a changing nightly order list. Learner is intermediate Python dev, already comfortable with async/await and coroutines; problem set is narrowly scoped to asyncio.gather mechanics only (no asyncio.create_task, TaskGroup, or other concurrency primitives unless needed for contrast). Tone: friendly, whimsical, lightly humorous baking/magic theme. Each part builds directly on functions/data from previous part (same bakery module, growing order list, same Pastry/BakeResult data shapes) so the whole set feels like one continuous night at the bakery.",
+        "language": "python",
+        "part_title": "Part 1: Too Many Orders, Too Little Time",
+        "writer_details": "- Introduce bakery premise briefly, keep light/funny\n- Explain problem: apprentice awaits each pastry one by one, dawn is close, needs concurrency\n- Explain asyncio.gather(*coroutines) runs coroutines concurrently and returns results list in same order as args, regardless of completion order\n- Mention timing comparison (sequential vs gather) as a way to *see* concurrency benefit\n- Keep explanation focused only on basic gather usage & ordering guarantee, no exceptions yet",
+        "coder_details": "- Provide starter module bakery.py with: Pastry dataclass (name, bake_time), async def bake_pastry(pastry) -> str (returns e.g. f'{pastry.name} is ready!') using asyncio.sleep(pastry.bake_time)\n- Provide list of 3-4 Pastry objects with varying bake_time (e.g. 1,2,1.5,2.5 seconds, keep short for testing)\n- Skeleton function bake_all_sequential(pastries) fully implemented (loop+await) for comparison, given as reference/starter\n- Skeleton function bake_all_concurrent(pastries) -> results list, TODO: use asyncio.gather to await all bake_pastry coroutines and return list of results in same order as input\n- Provide a small timing harness (time.perf_counter) to print elapsed time for both versions, but leave gather implementation blank for learner\n- Dataset: fixed list of pastries so results are deterministic for grading\n- No exception-raising pastries in this part yet"
+    }"""}
 ]
-
-tools = []
-
-template_fields = {
-    "title": {
-        "type": "string",
-        "description": "The problem set title"
-    },
-    "details": {
-        "type": "string",
-        "description": "A full summary of the story and its details that will be provided to every downstream agent"
-    },
-    "language": {
-        "type": "string",
-        "description": "The programming language used for the problem set"
-    },
-    "estimated_total_time_minutes": {
-        "type": "number",
-        "description": "The estimated total time to complete the whole problem set"
-    },
-    "parts": {
-        "type": "array",
-        "description": "A list of individual problem set sections, presented in order",
-        "minItems": 1,
-        "items": {
-            "type": "object",
-            "properties": {
-                "title": {
-                    "type": "string",
-                    "description": "The title of the specific problem set section"
-                },
-                "details": {
-                    "type": "string",
-                    "description": "Additional story or implementation details specific to this part, will be included with top level details"
-                },
-                "description_agent_notes": {
-                    "type": "string",
-                    "description": "Specific instructions, criteria and information given exclusively to the description agent"
-                },
-                "coding_agent_notes": {
-                    "type": "string",
-                    "description": "Specific instructions, criteria and information given exclusively to the coding agent"
-                }
-            },
-            "required": ["title", "details", "description_agent_notes", "coding_agent_notes"],
-            "additionalProperties": False
-        }
-    }
-}
-
-response_format = {
-    "type": "json_schema",
-    "json_schema": {
-        "name": "orchestrator_spec",
-        "strict": True,
-        "schema": {
-            "type": "object",
-            "properties": template_fields,
-            "required": ["title", "details", "language", "estimated_total_time_minutes", "parts"],
-            "additionalProperties": False
-        }
-    }
-}
 
 def make_request() -> requests.models.Response:
     return requests.post(
@@ -110,23 +55,29 @@ def make_request() -> requests.models.Response:
         headers = {"Authorization": f"Bearer {API_KEY}"},
         json = {
             "model": model,
-            "messages": messages,
-            "tools": tools,
-            "response_format": response_format
+            "messages": messages
         }
     )
 
 # print(make_request().json())
 
 
-while True:
-    new_message = input()
-    if not new_message:
-        continue
-    messages.append({"role": "user", "content": new_message})
-    response = make_request()
-    print(response.text)
-    if "error" in response.json():
-        print(response.json()["error"]["message"])
-    else:
-        print(response.json()["choices"][0]["message"]["content"])
+# while True:
+#     new_message = input()
+#     if not new_message:
+#         continue
+#     messages.append({"role": "user", "content": new_message})
+#     response = make_request()
+#     print(response.text)
+#     if "error" in response.json():
+#         print(response.json()["error"]["message"])
+#     else:
+#         print(response.json()["choices"][0]["message"]["content"])
+
+
+response = make_request()
+print(response)
+print(response.text)
+print(response.json())
+print(response.json()["choices"][0]["message"]["content"])
+
