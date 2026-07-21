@@ -120,7 +120,7 @@ async def deploy_agents(spec: dict) -> dict:
     }
 
 
-async def deploy_agents(spec: dict) -> dict:
+# async def deploy_agents(spec: dict) -> dict:
     """
     Returns a dict in this format:
     {
@@ -145,7 +145,6 @@ async def deploy_agents(spec: dict) -> dict:
         ]
     }
     """
-
 
     return {
         "title": spec["title"],
@@ -218,4 +217,4 @@ while True:
 # Plan
 spec = plan(reply["learning_details"])
 
-
+print(spec)

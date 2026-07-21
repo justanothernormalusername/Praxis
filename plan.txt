@@ -28,6 +28,7 @@ refine orchestrator prompt
 
 Testing prompt:
 User has prior experience with neural networks (not a complete beginner). Topic: building a small feedforward neural network with a small number of neurons and implementing backpropagation from scratch. Language: Python. Libraries: numpy allowed, but no large deep learning frameworks like PyTorch/TensorFlow. Style: storytelling narrative that wraps a hands-on implementation challenge (code-along style). Learning goal: reinforce understanding of forward pass and backprop math by implementing it manually. Keep the problem set concise and approachable.
+The user is fairly new to Python's asyncio library. Their current knowledge includes coroutines, futures, gather, await, and async def. They have NOT been exposed to queues or synchronization primitives. The learning goal is to further their knowledge of asyncio by practicing the next natural step: task cancellation and timeouts, specifically using asyncio.wait_for and Task.cancel(). Programming ability: beginner-to-intermediate with asyncio, comfortable with basic async/await syntax and gather. Preferred learning style: storytelling / narrative scenario where problems are wrapped in a small, engaging scenario (the user is happy for the assistant to choose the specific topic/theme). Requirements: keep the problem set narrow and focused on cancellation and timeouts, building directly on their existing knowledge without assuming familiarity with queues or synchronization. Tone should be friendly and approachable.
 
 TODO
 

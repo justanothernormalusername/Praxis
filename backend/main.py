@@ -124,7 +124,7 @@ async def orchestrator(details: Details) -> str:
     One way of transporting cows is to always pick the heaviest cow that will fit onto the spaceship first. This is an example of a greedy algorithm. So if there are only 2 tons of free space on your spaceship, with one cow that's 3 tons and another that's 1 ton, the 1 ton cow will get put onto the spaceship.
 
     Coding agent
-    Writes the skeleton code, starter files and generates datasets
+    Writes the skeleton code and starter files
 
     Verification agent
     Writes the grader code, rubric, and scoring guidelines
@@ -137,6 +137,8 @@ async def orchestrator(details: Details) -> str:
     Decide the specific story (dont need to write it out, just explanations for downstream agents to recieve)
     Fill in the json template spec and output
 
+    In your part output, keep the first part as an introduction to the problem set, setting up the story for the whole problem. 
+    Since this is an introduction, keep coding_agent_details empty. 
     You are not limited to 2 parts, add as many as required to completely convey the learning material
     """
 
@@ -417,14 +419,105 @@ class SpecDetails(BaseModel):
     parts: list
 
 @app.post("/build")
-async def build(details: SpecDetails) -> str:
-    writer_prompt = """
+async def build(spec: SpecDetails) -> str:
     """
+    Takes in the spec in SpecDetails form
 
-    writer_messages = [
-        {"role": "system", "content": writer_prompt},
-        {"role": "user", "content": details.model_dump_json()}
-    ]
+    Returns a dict in this format:
+    {
+        "title": str,
+        "details": str,
+        "language": str,
+        "estimated_total_time_minutes": int,
+        "parts": [
+            {
+                "title": str,
+                "details": str,
+                "write": requests.models.Response,
+                "code": requests.models.Response
+            },
+            {
+                "title": str,
+                "details": str,
+                "write": requests.models.Response,
+                "code": requests.models.Response
+            },
+            ...
+        ]
+    }
+    """
+    gen_queue = []
+
+    async def write_intro() -> str:
+        intro = spec.parts[0]
+        
+        intro_request_json = {
+            "title": spec.title,
+            "details": spec.details,
+            "language": spec.language,
+            "part_title": intro["title"],
+            "part_details": intro["details"],
+            "writer_details": intro["description_agent_notes"]
+        }
+
+        intro_prompt = """
+        You are a model deployed as part of a learning app specifically focused on programming. The app will generate engaging, stylized, homework like problem sets to exercise and teach techniques and content. Each problem set is split into seperate sections, each made as linked, cohesive lessons. The sections are created by 2 seperate agents: the writer and coder. You are the introduction writer agent, tasked to write the introduction and story for the entire proplem set. Within the story, ensure explanations of how it is relevant to the code/concept. The end goal is to allow the user to learn by doing and following the story. In the instructions,include any information on data or code for understanding and clarification and any additional information that will enhance the user experience. You will be provided with information on the overall story. Your main goal is to balance the user's learning experience between fun and educational. 
+
+        Example:
+        Space Cows Introduction
+        A colony of Aucks (super-intelligent alien bioengineers) has landed on Earth and has created new species of farm animals! The Aucks are performing their experiments on Earth, and plan on transporting the mutant animals back to their home planet of Aurock. In this problem set, you will implement algorithms to figure out how the aliens should shuttle their experimental animals back across space.
+
+        Getting started!
+
+        Download pset1.zip from the website.
+
+        Please do not rename the files we provide you with, change any of the provided helper functions, change function/method names, or delete provided docstrings. You will need to keep ps1_partition.py and ps1_cow_data.txt in the same folder as ps1.py.
+
+
+        Transporting Cows Across Space!
+
+        The aliens have succeeded in breeding cows that jump over the moon! Now they want to take home their mutant cows. The aliens want to take all chosen cows back, but their spaceship has a weight limit and they want to minimize the number of trips they have to take across the universe. Somehow, the aliens have developed breeding technology to make cows with only integer weights.
+
+        The data for the cows to be transported is stored in ps1_cow_data.txt. All of your code for Part A should go into ps1.py.
+
+        First we need to load the cow data from the data file ps1_cow_data.txt, this has already been done for you and should let you begin working on the rest of this problem. If you are having issues getting the ps1_cow_data.txt to load, be sure that you have it in the same folder as the ps1.py that you are running.
+
+        You can expect the data to be formatted in pairs of x,y on each line, where x is the name of the cow and y is a number indicating how much the cow weighs in tons, and that all of the cows have unique names. Here are the first few lines of ps1_cow_data.txt:
+
+        Maggie,3
+        Herman,7
+        Betsy,9
+        ...
+        """
+
+        intro_messages = [
+            {"role": "system", "content": intro_prompt},
+            {"role": "user", "content": intro_request_json}
+        ]
+
+        response = await chat_with_ai(writer_model, intro_messages)
+
+        # Error handling
+        if "error" in response.json():
+            raise Exception(response.json()["error"]["message"])
+        else:
+            response_output = response.json()["choices"][0]["message"]["content"]
+
+        return response_output.json()
+    gen_queue.append(write_intro())
+
+
+    for section in spec.parts:
+        agent_request_json = {
+            "title": spec.title,
+            "details": spec.details,
+            "language": spec.language,
+            "part_title": section["title"],
+            "writer_details": section["description_agent_notes"]
+        }
+
+        # section_output["write"].append(asyncio.to_thread(make_request, "write", agent_request_json))
+        # section_output["code"].append(asyncio.to_thread(make_request, "code", agent_request_json))
 
     response = await chat_with_ai(writer_model, writer_messages)
 
