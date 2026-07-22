@@ -7,6 +7,10 @@ import asyncio
 import requests
 import json
 import os
+import logging
+
+
+logger = logging.getLogger("uvicorn")
 
 app = FastAPI()
 
@@ -83,14 +87,14 @@ async def chat_with_ai(model: str, content: list, tools: list | None = None, res
         try:
             parsed_error = response.json()
             if "error" in parsed_error:
-                error_data = parsed_error["error"]["message"] + "\n" + parsed_error
+                error_data = parsed_error["error"]["message"] + "\n" + str(parsed_error)
             else:
                 error_data = parsed_error
         except Exception as e:
-            print("Could not parse error:", e)
+            logger.warning("Could not parse error: %s", e)
             error_data = response.text[:500]
         error_str = f"Error {response.status_code}: {error_data}"
-        print(error_str)
+        logger.warning(error_str)
 
         if return_json:
             return {"error": error_str}
@@ -137,7 +141,6 @@ async def chatbot_handler(content: Content) -> dict:
 
     # Handle tool calling
     if choices[0]["finish_reason"] is not None and response["choices"][0]["finish_reason"] == "tool_calls":
-        print(response)
         learning_details = json.loads(response["choices"][0]["message"]["tool_calls"][0]["function"]["arguments"])["learning_details"]
 
         return {"status": "done", "response": response_output, "learning_details": learning_details}
@@ -207,7 +210,7 @@ async def orchestrator(details: Details) -> str:
         "parts": {
             "type": "array",
             "description": "A list of individual problem set sections, presented in order",
-            "minItems": 2,
+            "minItems": 1,
             "items": {
                 "type": "object",
                 "properties": {
@@ -248,15 +251,15 @@ async def orchestrator(details: Details) -> str:
         }
     }
 
-    print(details.learning_details)
+    logger.debug(details.learning_details)
 
     start_time = datetime.now()
-    print("Starting spec generation at:", start_time.strftime("%H:%M:%S"))
+    logger.info("Starting spec generation at: %s", start_time.strftime("%H:%M:%S"))
 
     response = await chat_with_ai(plan_model, content, response_format=response_format)
 
     time_elapsed = datetime.now() - start_time
-    print("Spec generated in:", time_elapsed)
+    logger.info("Spec generated in: %s", time_elapsed)
 
     return response
 
@@ -296,7 +299,7 @@ async def build(spec: SpecDetails) -> dict:
     }
     """
     start_time = datetime.now()
-    print("Starting problem set build at:", start_time.strftime("%H:%M:%S"))
+    logger.info("Starting problem set build at: %s", start_time.strftime("%H:%M:%S"))
 
     full_output_json = {
         "title": spec.title,
@@ -357,7 +360,7 @@ async def build(spec: SpecDetails) -> dict:
     
     time_elapsed = datetime.now() - start_time
     last_time = datetime.now()
-    print("Introduction done in:", time_elapsed)
+    logger.info("Introduction done in: %s", time_elapsed)
 
 
     # Writes first description
@@ -474,7 +477,7 @@ async def build(spec: SpecDetails) -> dict:
 
     time_elapsed = datetime.now() - last_time
     last_time = datetime.now()
-    print("Description built in:", time_elapsed)
+    logger.info("Description built in: %s", time_elapsed)
 
 
     # Writes code section
@@ -609,7 +612,7 @@ async def build(spec: SpecDetails) -> dict:
     full_output_json["code"] = code
 
     time_elapsed = datetime.now() - last_time
-    print("Code built in:", time_elapsed)
+    logger.info("Code built in: %s", time_elapsed)
 
     # Remove coding_agent_notes from full_output_json
     for part in full_output_json["parts"]:
@@ -618,7 +621,7 @@ async def build(spec: SpecDetails) -> dict:
 
     end_time = datetime.now()
     time_elapsed = end_time - start_time
-    print("Final build completed in:", time_elapsed, "at", end_time.strftime("%H:%M:%S"))
+    logger.info("Final build completed in: %s at %s", time_elapsed, end_time.strftime("%H:%M:%S"))
 
     # output file
     return full_output_json
