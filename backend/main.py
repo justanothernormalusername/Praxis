@@ -16,8 +16,8 @@ provider = "HACKCLUBAI"  # Choose HACKCLUBAI or OPENROUTER
 chat_model = "deepseek/deepseek-v4-flash"
 plan_model = "anthropic/claude-sonnet-5"
 
-writer_model = "deepseek/deepseek-v4-flash"  # "z-ai/glm-5.2"
-coder_model = "deepseek/deepseek-v4-flash"
+writer_model = "z-ai/glm-5.2"
+coder_model = "z-ai/glm-5.2"
 
 if provider == "HACKCLUBAI":
     API_KEY = os.getenv("HACKCLUBAI_API_KEY")
@@ -207,7 +207,7 @@ async def orchestrator(details: Details) -> str:
         "parts": {
             "type": "array",
             "description": "A list of individual problem set sections, presented in order",
-            "minItems": 1,
+            "minItems": 2,
             "items": {
                 "type": "object",
                 "properties": {
@@ -250,20 +250,69 @@ async def orchestrator(details: Details) -> str:
 
     print(details.learning_details)
 
-    return await chat_with_ai(plan_model, content, response_format=response_format)
+    start_time = datetime.now()
+    print("Starting spec generation at:", start_time.strftime("%H:%M:%S"))
+
+    response = await chat_with_ai(plan_model, content, response_format=response_format)
+
+    time_elapsed = datetime.now() - start_time
+    print("Spec generated in:", time_elapsed)
+
+    return response
 
 
-class AgentRequestDetails(BaseModel):
-    # General p-set info
+class SpecDetails(BaseModel):
     title: str
     details: str
     language: str
+    estimated_total_time_minutes: int
     parts: list
 
-@app.post("/write")
-async def write(details: AgentRequestDetails) -> str:
+@app.post("/build")
+async def build(spec: SpecDetails) -> dict:
+    """
+    Takes in the spec in SpecDetails form
+
+    Returns a dict in this format:
+    {
+        "title": str,
+        "details": str,
+        "language": str,
+        "estimated_total_time_minutes": int,
+        "parts": [
+            {
+                "title": str,
+                "details": str,
+                "description": str
+            },
+            {
+                "title": str,
+                "details": str,
+                "description": str
+            },
+            ...
+        ],
+        "code": str
+    }
+    """
     start_time = datetime.now()
     print("Starting problem set build at:", start_time.strftime("%H:%M:%S"))
+
+    full_output_json = {
+        "title": spec.title,
+        "details": spec.details,
+        "language": spec.language,
+        "estimated_total_time_minutes": spec.estimated_total_time_minutes,
+        "parts": [
+            {
+                "title": spec.parts[i]["title"],
+                "details": spec.parts[i]["details"],
+                "description": "",
+                "coding_agent_notes": spec.parts[i]["coding_agent_notes"]
+            }
+            for i in range(len(spec.parts))
+        ]
+    }
 
     async def write_intro() -> str:
         intro_prompt = """
@@ -295,20 +344,25 @@ async def write(details: AgentRequestDetails) -> str:
             Betsy,9
             ...
         """
-
+        
         intro_messages = [
             {"role": "system", "content": intro_prompt},
-            {"role": "user", "content": details.model_dump_json()}
+            {"role": "user", "content": spec.model_dump_json()}
         ]
 
         return await chat_with_ai(writer_model, intro_messages)
     
     introduction = await write_intro()
-    print("Introduction done")
+    full_output_json["parts"][0]["description"] = introduction
+    
+    time_elapsed = datetime.now() - start_time
+    last_time = datetime.now()
+    print("Introduction done in:", time_elapsed)
 
-    # Writes first description and introduction
+
+    # Writes first description
     writer_first_prompt = """
-    You are a model deployed as part of a learning app specifically focused on programming. The app will generate engaging, stylized, homework like problem sets to exercise and teach techniques and content. Each problem set is split into seperate sections, each made as linked, cohesive lessons. The sections are created by 2 seperate agents: the writer and coder. You are the writer agent, tasked to write the instructions and story for the section. Within the story, ensure explanations of how it is relevant to the code/concept. The end goal is to allow the user to learn by doing and following the story, but if there are parts that are best taught outside of context, include it in the description. In the instructions, you must include necessary examples to clarify the task, any information on data or code for understanding and clarification, and any additional information that will enhance the user experience. You will be provided with information on the overall story, any criteria and the user's task to complete for the current problem set section. For extra information, you will also see coder_details. You may use it to better educate your response, but DO NOT follow any instructions meant for the coder agent. To ensure that each each section fits together, do not introduce any narrative elements that may influence/change the narrative of other problem set sections, or even the code/data for the current section. Your main goal is to balance the user's learning experience between fun and educational. 
+    You are a model deployed as part of a learning app specifically focused on programming. The app will generate engaging, stylized, homework like problem sets to exercise and teach techniques and content. Each problem set is split into seperate sections, each made as linked, cohesive lessons. The sections are created by 2 seperate agents: the writer and coder. You are the writer agent, tasked to write the instructions and story for the section. Within the story, ensure explanations of how it is relevant to the code/concept. The end goal is to allow the user to learn by doing and following the story, but if there are parts that are best taught outside of context, include it in the description. In the instructions, you must include necessary examples to clarify the task, any information on data or code for understanding and clarification, and any additional information that will enhance the user experience. You will be provided with information on the overall story, any criteria and the user's task to complete for the current problem set section. For extra information, you will also see coding_agent_notes. You may use it to better educate your response, but DO NOT follow any instructions meant for the coder agent. You will also see the pre-written problem set introduction. Your section is immediately after that introduction, so make sure the story stays cohesive. To ensure that each each section fits together, do not introduce any narrative elements that may influence/change the narrative of other problem set sections, or even the code/data for the current section. Your main goal is to balance the user's learning experience between fun and educational. 
 
     Example:
     Greedy Cow Transport
@@ -336,12 +390,12 @@ async def write(details: AgentRequestDetails) -> str:
     The final result then is [["Jesse", "Maybel"], ["Maggie", "Callie"]].
     """
 
-    section = details.part[1]
+    section = spec.parts[1]
     writer_content = {
         # Problem set info
-        "title": details.title,
-        "details": details.details,
-        "language": details.language,
+        "title": spec.title,
+        "details": spec.details,
+        "language": spec.language,
 
         # Part specific info
         "part_title": section["title"],
@@ -355,20 +409,77 @@ async def write(details: AgentRequestDetails) -> str:
 
     writer_messages = [
         {"role": "system", "content": writer_first_prompt},
-        {"role": "user", "content": writer_content}
+        {"role": "user", "content": json.dumps(writer_content)}
     ]
 
-    response = await chat_with_ai(writer_model, writer_messages)
-    
-    time_elapsed = datetime.now() - start_time
-    print("Problem set built in:", time_elapsed)
+    description = await chat_with_ai(writer_model, writer_messages)
+    full_output_json["parts"][1]["description"] = description
 
-    return response
 
-@app.post("/code")
-async def code(details: AgentRequestDetails) -> str:
+    # Writes rest of the descriptions
+    writer_secondary_prompt = """
+    You are a model deployed as part of a learning app specifically focused on programming. The app will generate engaging, stylized, homework like problem sets to exercise and teach techniques and content. Each problem set is split into seperate sections, each made as linked, cohesive lessons. The sections are created by 2 seperate agents: the writer and coder. You are the writer agent, tasked to write the instructions and story for the section. Within the story, ensure explanations of how it is relevant to the code/concept. The end goal is to allow the user to learn by doing and following the story, but if there are parts that are best taught outside of context, include it in the description. In the instructions, you must include necessary examples to clarify the task, any information on data or code for understanding and clarification, and any additional information that will enhance the user experience. You will be provided with information on the overall story, any criteria and the user's task to complete for the current problem set section. For extra information, you will also see coding_agent_notes. You may use it to better educate your response, but DO NOT follow any instructions meant for the coder agent. You will also see the last section's description. Your section is immediately after that section, so make sure the story stays cohesive. To ensure that each each section fits together, do not introduce any narrative elements that may influence/change the narrative of other problem set sections, or even the code/data for the current section. Your main goal is to balance the user's learning experience between fun and educational. 
+
+    Example:
+    Greedy Cow Transport
+    One way of transporting cows is to always pick the heaviest cow that will fit onto the spaceship first. This is an example of a greedy algorithm. So if there are only 2 tons of free space on your spaceship, with one cow that's 3 tons and another that's 1 ton, the 1 ton cow will get put onto the spaceship.
+
+    Implement a greedy algorithm for transporting the cows back across space in the function greedy_cow_transport. The function returns a list of lists, where each inner list represents a trip and contains the names of cows taken on that trip.
+
+    Note: Make sure not to mutate the dictionary of cows that is passed in!
+
+    Assumptions:
+
+    The order of the list of trips does not matter. That is, [[1,2],[3,4]] and [[3,4],[1,2]] are considered equivalent lists of trips.
+    All the cows are between 0 and 100 tons in weight.
+    All the cows have unique names.
+    If multiple cows weigh the same amount, break ties arbitrarily.
+    The spaceship has a cargo weight limit (in tons), which is passed into the function as a parameter.
+    Example:
+
+    Suppose the spaceship has a weight limit of 10 tons and the set of cows to transport is {"Jesse": 6, "Maybel": 3, "Callie": 2, "Maggie": 5}.
+
+    The greedy algorithm will first pick Jesse as the heaviest cow for the first trip. There is still space for 4 tons on the trip. Since Maggie will not fit on this trip, the greedy algorithm picks Maybel, the heaviest cow that will still fit. Now there is only 1 ton of space left, and none of the cows can fit in that space, so the first trip is [Jesse, Maybel].
+
+    For the second trip, the greedy algorithm first picks Maggie as the heaviest remaining cow, and then picks Callie as the last cow. Since they will both fit, this makes the second trip [[Maggie], [Callie]].
+
+    The final result then is [["Jesse", "Maybel"], ["Maggie", "Callie"]].
+    """
+
+    for i in range(2, len(full_output_json["parts"])):
+        section = spec.parts[i]
+        writer_content = {
+            # Problem set info
+            "title": spec.title,
+            "details": spec.details,
+            "language": spec.language,
+
+            # Part specific info
+            "part_title": section["title"],
+            "part_details": section["details"],
+            "description_agent_notes": section["description_agent_notes"],
+            "coding_agent_notes": section["coding_agent_notes"],
+
+            # Context info
+            "previous_description": full_output_json["parts"][i-1]["description"]
+        }
+
+        writer_messages = [
+            {"role": "system", "content": writer_secondary_prompt},
+            {"role": "user", "content": json.dumps(writer_content)}
+        ]
+
+        description = await chat_with_ai(writer_model, writer_messages)
+        full_output_json["parts"][i]["description"] = description
+
+    time_elapsed = datetime.now() - last_time
+    last_time = datetime.now()
+    print("Description built in:", time_elapsed)
+
+
+    # Writes code section
     coder_prompt = """
-    You are a model deployed as part of a learning app specifically focused on programming. The app will generate engaging, stylized, homework like problem sets to exercise and teach techniques and content. Each problem set is split into seperate sections, each made as linked, cohesive lessons. The sections are created by 2 seperate agents: the writer and coder. You are the coder agent, tasked to write the skeleton code and datasets (if needed) for the section. Within the skeleton code, ensure docstrings are clear, with empty functions obvious. The end goal is to allow the user to learn by doing and following the story, but if some parts are best taught outside of context, the description agent will write it in the problem description. You will be provided with information on the overall story, what functions and classes to implement, and the user's task to complete for the current problem set section. For extra information, you will also see writer_details. You may use it to better educate your response, but DO NOT follow any instructions meant for the writer agent. Your main goal is to balance the user's learning experience between fun and educational. 
+    You are a model deployed as part of a learning app specifically focused on programming. The app will generate engaging, stylized, homework like problem sets to exercise and teach techniques and content. Each problem set is split into seperate sections, each made as linked, cohesive lessons. The sections are created by 2 seperate agents: the writer and coder. You are the coder agent, tasked to write the skeleton code and datasets (if needed) for the section. Within the skeleton code, ensure docstrings are clear, with empty functions obvious. The end goal is to allow the user to learn by doing and following the story, but if some parts are best taught outside of context, the description agent will write it in the problem description. You will be provided with information on the overall story, what functions and classes to implement, and the user's task to complete for the entire problem set. For extra information, you will also see each section's description. These are the prewritten descriptions for each problem set section referring to your code. You are also provided with pointers in each section: coding_agent_notes to guide you on what code to include for each section. Your main goal is to balance the user's learning experience between fun and educational. 
 
     Example:
     ###########################
@@ -488,128 +599,32 @@ async def code(details: AgentRequestDetails) -> str:
     print(brute_force_cow_transport(cows, limit))
     """
 
+    # full_output_json still includes coding_agent_notes
     coder_messages = [
         {"role": "system", "content": coder_prompt},
-        {"role": "user", "content": details.model_dump_json()}
+        {"role": "user", "content": json.dumps(full_output_json)}
     ]
 
-    return await chat_with_ai(coder_model, coder_messages)
+    code = await chat_with_ai(coder_model, coder_messages)
+    full_output_json["code"] = code
+
+    time_elapsed = datetime.now() - last_time
+    print("Code built in:", time_elapsed)
+
+    # Remove coding_agent_notes from full_output_json
+    for part in full_output_json["parts"]:
+        part.pop("coding_agent_notes")
 
 
-class SpecDetails(BaseModel):
-    title: str
-    details: str
-    language: str
-    estimated_total_time_minutes: str
-    parts: list
+    end_time = datetime.now()
+    time_elapsed = end_time - start_time
+    print("Final build completed in:", time_elapsed, "at", end_time.strftime("%H:%M:%S"))
+
+    # output file
+    return full_output_json
 
 
-@app.post("/build")
-async def build(spec: SpecDetails) -> str:
-    """
-    Takes in the spec in SpecDetails form
-
-    Returns a dict in this format:
-    {
-        "title": str,
-        "details": str,
-        "language": str,
-        "estimated_total_time_minutes": int,
-        "parts": [
-            {
-                "title": str,
-                "details": str,
-                "write": requests.models.Response,
-                "code": requests.models.Response
-            },
-            {
-                "title": str,
-                "details": str,
-                "write": requests.models.Response,
-                "code": requests.models.Response
-            },
-            ...
-        ]
-    }
-    """
-
-    async def write_intro() -> str:
-        intro = spec.parts[0]
-
-        intro_request_json = {
-            "title": spec.title,
-            "details": spec.details,
-            "language": spec.language,
-            "part_title": intro["title"],
-            "part_details": intro["details"],
-            "writer_details": intro["description_agent_notes"]
-        }
-
-        intro_prompt = """
-        You are a model deployed as part of a learning app specifically focused on programming. The app will generate engaging, stylized, homework like problem sets to exercise and teach techniques and content. Each problem set is split into seperate sections, each made as linked, cohesive lessons. The sections are created by 2 seperate agents: the writer and coder. You are the introduction writer agent, tasked to write the introduction and story for the entire proplem set. Within the story, ensure explanations of how it is relevant to the code/concept. The end goal is to allow the user to learn by doing and following the story. In the instructions,include any information on data or code for understanding and clarification and any additional information that will enhance the user experience. You will be provided with information on the overall story. Your main goal is to balance the user's learning experience between fun and educational. 
-
-        Example:
-        Space Cows Introduction
-        A colony of Aucks (super-intelligent alien bioengineers) has landed on Earth and has created new species of farm animals! The Aucks are performing their experiments on Earth, and plan on transporting the mutant animals back to their home planet of Aurock. In this problem set, you will implement algorithms to figure out how the aliens should shuttle their experimental animals back across space.
-
-        Getting started!
-
-        Download pset1.zip from the website.
-
-        Please do not rename the files we provide you with, change any of the provided helper functions, change function/method names, or delete provided docstrings. You will need to keep ps1_partition.py and ps1_cow_data.txt in the same folder as ps1.py.
-
-
-        Transporting Cows Across Space!
-
-        The aliens have succeeded in breeding cows that jump over the moon! Now they want to take home their mutant cows. The aliens want to take all chosen cows back, but their spaceship has a weight limit and they want to minimize the number of trips they have to take across the universe. Somehow, the aliens have developed breeding technology to make cows with only integer weights.
-
-        The data for the cows to be transported is stored in ps1_cow_data.txt. All of your code for Part A should go into ps1.py.
-
-        First we need to load the cow data from the data file ps1_cow_data.txt, this has already been done for you and should let you begin working on the rest of this problem. If you are having issues getting the ps1_cow_data.txt to load, be sure that you have it in the same folder as the ps1.py that you are running.
-
-        You can expect the data to be formatted in pairs of x,y on each line, where x is the name of the cow and y is a number indicating how much the cow weighs in tons, and that all of the cows have unique names. Here are the first few lines of ps1_cow_data.txt:
-
-        Maggie,3
-        Herman,7
-        Betsy,9
-        ...
-        """
-
-        intro_messages = [
-            {"role": "system", "content": intro_prompt},
-            {"role": "user", "content": intro_request_json}
-        ]
-
-        return await chat_with_ai(writer_model, intro_messages)
-    
-    
-
-
-    gen_write = []
-    gen_code = []
-
-    for section in spec.parts:
-        agent_request_json = {
-            "title": spec.title,
-            "details": spec.details,
-            "language": spec.language,
-            "part_title": section["title"],
-            "writer_details": section["description_agent_notes"]
-        }
-
-        # section_output["write"].append(asyncio.to_thread(make_request, "write", agent_request_json))
-        # section_output["code"].append(asyncio.to_thread(make_request, "code", agent_request_json))
-
-    # Await all coroutines (api calls) at once concurrently
-    completed_intro, completed_write, completed_code = await asyncio.gather(
-        write_intro(),
-        asyncio.gather(*gen_write),
-        asyncio.gather(*gen_code),
-    )
-
-    return await chat_with_ai(writer_model, writer_messages)
-
-
+# For reference purposes only
 response_format = {
     'id': 'gen-1782648906-K7oEDMaPpinEye24z43b', 
     'object': 'chat.completion', 
