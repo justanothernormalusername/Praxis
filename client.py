@@ -54,14 +54,14 @@ async def deploy_agents(spec: dict) -> dict:
             {
                 "title": str,
                 "details": str,
-                "write": requests.models.Response,
-                "code": requests.models.Response
+                "write": str,
+                "code": str
             },
             {
                 "title": str,
                 "details": str,
-                "write": requests.models.Response,
-                "code": requests.models.Response
+                "write": str,
+                "code": str
             },
             ...
         ]
@@ -75,7 +75,7 @@ async def deploy_agents(spec: dict) -> dict:
                 return requests.post("http://127.0.0.1:8000/code", json=request_json).json()
             else:
                 raise TypeError("Type argument must be \"write\" or \"code\"")
-        
+
         section_output = {
             "write": [], 
             "code": []

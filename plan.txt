@@ -7,9 +7,20 @@ full spec
 agents work together
 look at agentic examples?
 
+writer gets first prompt
+writes intro
+then takes details + intro
+writes first description
+then writes 2nd description with full info, part info, previous response
 
+once all responses done, get cheap agent (hy3 free, deepseek flash) to review and quality check
+give tool calls that call other agents on specific parts with agent generated input prompt
 
-
+Each section call requires:
+- p-set title/details/language
+- section title/details
+- both section agent details
+- previous output of 
 
 
 TODOLISTRN

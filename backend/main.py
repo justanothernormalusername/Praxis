@@ -1,6 +1,8 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from dotenv import load_dotenv
+from datetime import datetime
+from typing import overload, Literal
 import asyncio
 import requests
 import json
@@ -11,11 +13,11 @@ app = FastAPI()
 load_dotenv()
 provider = "HACKCLUBAI"  # Choose HACKCLUBAI or OPENROUTER
 
-chat_model = "tencent/hy3:free"
+chat_model = "deepseek/deepseek-v4-flash"
 plan_model = "anthropic/claude-sonnet-5"
 
-writer_model = "tencent/hy3:free"  # "z-ai/glm-5.2"
-coder_model = "tencent/hy3:free"
+writer_model = "deepseek/deepseek-v4-flash"  # "z-ai/glm-5.2"
+coder_model = "deepseek/deepseek-v4-flash"
 
 if provider == "HACKCLUBAI":
     API_KEY = os.getenv("HACKCLUBAI_API_KEY")
@@ -26,10 +28,30 @@ elif provider == "OPENROUTER":
 else:
     raise Exception("Provider not found, please select between HACKCLUBAI and OPENROUTER")
 
+# Purely for typechecking of chat_with_ai function
+@overload
+async def chat_with_ai(
+    model: str, 
+    content: list, 
+    tools: list | None = None, 
+    response_format: dict | None = None, 
+    return_json: Literal[False] = False
+) -> str: ...
+
+@overload
+async def chat_with_ai(
+    model: str, 
+    content: list, 
+    tools: list | None = None, 
+    response_format: dict | None = None, 
+    return_json: Literal[True] = True
+) -> dict: ...
+
 # Returns a Request object
-async def chat_with_ai(model: str, content: list, tools: list | None = None, response_format: dict | None = None) -> requests.models.Response:
+async def chat_with_ai(model: str, content: list, tools: list | None = None, response_format: dict | None = None, return_json: bool = False) -> str | dict:
     if tools is None:
         tools = []
+
     def make_request() -> requests.models.Response:
         return requests.post(
             url = URL,
@@ -41,6 +63,7 @@ async def chat_with_ai(model: str, content: list, tools: list | None = None, res
                 "response_format": response_format
             }
         )
+    
     if response_format is None:
         response_format = {}
         def make_request() -> requests.models.Response:
@@ -53,8 +76,29 @@ async def chat_with_ai(model: str, content: list, tools: list | None = None, res
                     "tools": tools
                 }
             )
+        
     response = await asyncio.to_thread(make_request)
-    return response
+    
+    if not response.ok:
+        try:
+            parsed_error = response.json()
+            if "error" in parsed_error:
+                error_data = parsed_error["error"]["message"] + "\n" + parsed_error
+            else:
+                error_data = parsed_error
+        except Exception as e:
+            print("Could not parse error:", e)
+            error_data = response.text[:500]
+        error_str = f"Error {response.status_code}: {error_data}"
+        print(error_str)
+
+        if return_json:
+            return {"error": error_str}
+        return error_str
+
+    if return_json:
+        return response.json()
+    return response.json()["choices"][0]["message"]["content"]
 
 
 class Content(BaseModel):
@@ -81,29 +125,25 @@ async def chatbot_handler(content: Content) -> dict:
         }
     }
 
-    response = await chat_with_ai(chat_model, content.messages, [conversation_end_tool])
-    status = "running"
-    learning_details = ""
+    response = await chat_with_ai(chat_model, content.messages, [conversation_end_tool], return_json=True)
 
     # Error handling
-    if "error" in response.json():
-        status = "error"
-        response_output = response.json()["error"]["message"]
+    if response.get("choices"):
+        response_output = response["choices"][0]["message"]["content"]
     else:
-        response_output = response.json()["choices"][0]["message"]["content"]
+        return {"status": "error", "response": response["error"], "learning_details": ""}
     
-    choices = response.json().get("choices")
-    if choices is None:
-        print(response.json())
-        raise TypeError
+    choices = response["choices"]
 
     # Handle tool calling
-    if choices[0]["finish_reason"] is not None and response.json()["choices"][0]["finish_reason"] == "tool_calls":
-        status = "done"
-        print(response.json())
-        learning_details = json.loads(response.json()["choices"][0]["message"]["tool_calls"][0]["function"]["arguments"])["learning_details"]
+    if choices[0]["finish_reason"] is not None and response["choices"][0]["finish_reason"] == "tool_calls":
+        print(response)
+        learning_details = json.loads(response["choices"][0]["message"]["tool_calls"][0]["function"]["arguments"])["learning_details"]
 
-    return {"status": status, "response": response_output, "learning_details": learning_details}
+        return {"status": "done", "response": response_output, "learning_details": learning_details}
+
+    # If conversation not done (conclusion tool not called)
+    return {"status": "running", "response": response_output, "learning_details": ""}
 
 
 class Details(BaseModel):
@@ -210,25 +250,64 @@ async def orchestrator(details: Details) -> str:
 
     print(details.learning_details)
 
-    response = await chat_with_ai(plan_model, content, response_format=response_format)
-
-    if "error" in response.json():
-        return response.json()["error"]["message"]
-    
-    return response.json()["choices"][0]["message"]["content"]
+    return await chat_with_ai(plan_model, content, response_format=response_format)
 
 
 class AgentRequestDetails(BaseModel):
+    # General p-set info
     title: str
     details: str
     language: str
-    part_title: str
-    writer_details: str
-    coder_details: str
+    parts: list
 
 @app.post("/write")
 async def write(details: AgentRequestDetails) -> str:
-    writer_prompt = """
+    start_time = datetime.now()
+    print("Starting problem set build at:", start_time.strftime("%H:%M:%S"))
+
+    async def write_intro() -> str:
+        intro_prompt = """
+            You are a model deployed as part of a learning app specifically focused on programming. The app will generate engaging, stylized, homework like problem sets to exercise and teach techniques and content. Each problem set is split into seperate sections, each made as linked, cohesive lessons. The sections are created by 2 seperate agents: the writer and coder. You are the introduction writer agent, tasked to write the introduction and story for the entire proplem set. Within the story, ensure explanations of how it is relevant to the code/concept. The end goal is to allow the user to learn by doing and following the story. In the instructions,include any information on data or code for understanding and clarification and any additional information that will enhance the user experience. You will be provided with information on the overall story. Your main goal is to balance the user's learning experience between fun and educational. 
+
+            Example:
+            Space Cows Introduction
+            A colony of Aucks (super-intelligent alien bioengineers) has landed on Earth and has created new species of farm animals! The Aucks are performing their experiments on Earth, and plan on transporting the mutant animals back to their home planet of Aurock. In this problem set, you will implement algorithms to figure out how the aliens should shuttle their experimental animals back across space.
+
+            Getting started!
+
+            Download pset1.zip from the website.
+
+            Please do not rename the files we provide you with, change any of the provided helper functions, change function/method names, or delete provided docstrings. You will need to keep ps1_partition.py and ps1_cow_data.txt in the same folder as ps1.py.
+
+
+            Transporting Cows Across Space!
+
+            The aliens have succeeded in breeding cows that jump over the moon! Now they want to take home their mutant cows. The aliens want to take all chosen cows back, but their spaceship has a weight limit and they want to minimize the number of trips they have to take across the universe. Somehow, the aliens have developed breeding technology to make cows with only integer weights.
+
+            The data for the cows to be transported is stored in ps1_cow_data.txt. All of your code for Part A should go into ps1.py.
+
+            First we need to load the cow data from the data file ps1_cow_data.txt, this has already been done for you and should let you begin working on the rest of this problem. If you are having issues getting the ps1_cow_data.txt to load, be sure that you have it in the same folder as the ps1.py that you are running.
+
+            You can expect the data to be formatted in pairs of x,y on each line, where x is the name of the cow and y is a number indicating how much the cow weighs in tons, and that all of the cows have unique names. Here are the first few lines of ps1_cow_data.txt:
+
+            Maggie,3
+            Herman,7
+            Betsy,9
+            ...
+        """
+
+        intro_messages = [
+            {"role": "system", "content": intro_prompt},
+            {"role": "user", "content": details.model_dump_json()}
+        ]
+
+        return await chat_with_ai(writer_model, intro_messages)
+    
+    introduction = await write_intro()
+    print("Introduction done")
+
+    # Writes first description and introduction
+    writer_first_prompt = """
     You are a model deployed as part of a learning app specifically focused on programming. The app will generate engaging, stylized, homework like problem sets to exercise and teach techniques and content. Each problem set is split into seperate sections, each made as linked, cohesive lessons. The sections are created by 2 seperate agents: the writer and coder. You are the writer agent, tasked to write the instructions and story for the section. Within the story, ensure explanations of how it is relevant to the code/concept. The end goal is to allow the user to learn by doing and following the story, but if there are parts that are best taught outside of context, include it in the description. In the instructions, you must include necessary examples to clarify the task, any information on data or code for understanding and clarification, and any additional information that will enhance the user experience. You will be provided with information on the overall story, any criteria and the user's task to complete for the current problem set section. For extra information, you will also see coder_details. You may use it to better educate your response, but DO NOT follow any instructions meant for the coder agent. To ensure that each each section fits together, do not introduce any narrative elements that may influence/change the narrative of other problem set sections, or even the code/data for the current section. Your main goal is to balance the user's learning experience between fun and educational. 
 
     Example:
@@ -257,18 +336,32 @@ async def write(details: AgentRequestDetails) -> str:
     The final result then is [["Jesse", "Maybel"], ["Maggie", "Callie"]].
     """
 
+    section = details.part[1]
+    writer_content = {
+        # Problem set info
+        "title": details.title,
+        "details": details.details,
+        "language": details.language,
+
+        # Part specific info
+        "part_title": section["title"],
+        "part_details": section["details"],
+        "description_agent_notes": section["description_agent_notes"],
+        "coding_agent_notes": section["coding_agent_notes"],
+
+        # Context info
+        "introduction": introduction
+    }
+
     writer_messages = [
-        {"role": "system", "content": writer_prompt},
-        {"role": "user", "content": details.model_dump_json()}
+        {"role": "system", "content": writer_first_prompt},
+        {"role": "user", "content": writer_content}
     ]
 
     response = await chat_with_ai(writer_model, writer_messages)
-
-    # Error handling
-    if "error" in response.json():
-        response = response.json()["error"]["message"]
-    else:
-        response = response.json()["choices"][0]["message"]["content"]
+    
+    time_elapsed = datetime.now() - start_time
+    print("Problem set built in:", time_elapsed)
 
     return response
 
@@ -400,15 +493,7 @@ async def code(details: AgentRequestDetails) -> str:
         {"role": "user", "content": details.model_dump_json()}
     ]
 
-    response = await chat_with_ai(coder_model, coder_messages)
-
-    # Error handling
-    if "error" in response.json():
-        response = response.json()["error"]["message"]
-    else:
-        response = response.json()["choices"][0]["message"]["content"]
-
-    return response
+    return await chat_with_ai(coder_model, coder_messages)
 
 
 class SpecDetails(BaseModel):
@@ -417,6 +502,7 @@ class SpecDetails(BaseModel):
     language: str
     estimated_total_time_minutes: str
     parts: list
+
 
 @app.post("/build")
 async def build(spec: SpecDetails) -> str:
@@ -446,11 +532,10 @@ async def build(spec: SpecDetails) -> str:
         ]
     }
     """
-    gen_queue = []
 
     async def write_intro() -> str:
         intro = spec.parts[0]
-        
+
         intro_request_json = {
             "title": spec.title,
             "details": spec.details,
@@ -495,17 +580,13 @@ async def build(spec: SpecDetails) -> str:
             {"role": "user", "content": intro_request_json}
         ]
 
-        response = await chat_with_ai(writer_model, intro_messages)
+        return await chat_with_ai(writer_model, intro_messages)
+    
+    
 
-        # Error handling
-        if "error" in response.json():
-            raise Exception(response.json()["error"]["message"])
-        else:
-            response_output = response.json()["choices"][0]["message"]["content"]
 
-        return response_output.json()
-    gen_queue.append(write_intro())
-
+    gen_write = []
+    gen_code = []
 
     for section in spec.parts:
         agent_request_json = {
@@ -519,15 +600,14 @@ async def build(spec: SpecDetails) -> str:
         # section_output["write"].append(asyncio.to_thread(make_request, "write", agent_request_json))
         # section_output["code"].append(asyncio.to_thread(make_request, "code", agent_request_json))
 
-    response = await chat_with_ai(writer_model, writer_messages)
+    # Await all coroutines (api calls) at once concurrently
+    completed_intro, completed_write, completed_code = await asyncio.gather(
+        write_intro(),
+        asyncio.gather(*gen_write),
+        asyncio.gather(*gen_code),
+    )
 
-    # Error handling
-    if "error" in response.json():
-        response = response.json()["error"]["message"]
-    else:
-        response = response.json()["choices"][0]["message"]["content"]
-
-    return response
+    return await chat_with_ai(writer_model, writer_messages)
 
 
 response_format = {
