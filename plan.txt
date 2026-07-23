@@ -1,95 +1,17 @@
 Next: 
-logging
 better prompts
-output.py file
+output file handling
+dataset generation
+
+full agent verification
+
 frontend start
 
-chat_with_ai function: if model fails, try again
-
-
-agent architechture
-
-orchestrator
-v
-full spec
-
-agents work together
-look at agentic examples?
-
-writer gets first prompt
-writes intro
-then takes details + intro
-writes first description
-then writes 2nd description with full info, part info, previous response
 
 once all responses done, get cheap agent (hy3 free, deepseek flash) to review and quality check
 give tool calls that call other agents on specific parts with agent generated input prompt
 
-Each section call requires:
-- p-set title/details/language
-- section title/details
-- both section agent details
-- previous output of 
 
-
-TODOLISTRN
-
-async http calls for each agent type
-client processes the spec and splits it between each agent call
-agent call for intro
-all agents called once per pset section
-assemble
-
-UI?
-
-*do later: 
-refine chatbot prompt
-refine orchestrator prompt
-
-Testing prompt:
+Testing prompts:
 User has prior experience with neural networks (not a complete beginner). Topic: building a small feedforward neural network with a small number of neurons and implementing backpropagation from scratch. Language: Python. Libraries: numpy allowed, but no large deep learning frameworks like PyTorch/TensorFlow. Style: storytelling narrative that wraps a hands-on implementation challenge (code-along style). Learning goal: reinforce understanding of forward pass and backprop math by implementing it manually. Keep the problem set concise and approachable.
 The user is fairly new to Python's asyncio library. Their current knowledge includes coroutines, futures, gather, await, and async def. They have NOT been exposed to queues or synchronization primitives. The learning goal is to further their knowledge of asyncio by practicing the next natural step: task cancellation and timeouts, specifically using asyncio.wait_for and Task.cancel(). Programming ability: beginner-to-intermediate with asyncio, comfortable with basic async/await syntax and gather. Preferred learning style: storytelling / narrative scenario where problems are wrapped in a small, engaging scenario (the user is happy for the assistant to choose the specific topic/theme). Requirements: keep the problem set narrow and focused on cancellation and timeouts, building directly on their existing knowledge without assuming familiarity with queues or synchronization. Tone should be friendly and approachable.
-
-TODO
-
-2. memory
-plaintext
-
-use all previous messages as context
-
-Append each user input and assistant response to a messages array before the next call.
-
-full messages array is sent with each request
-
-3. orchestrator
-
-write out full prompting for initial chatbot agent
-including tool call descriptions
-
-Tool Call Description:
-This tool is to be called when the end learning goal is fully clarified, and both you and the user have the a full exact picture of what they want to learn and accomplish from this experience. 
-
-Tool Return Description (learning_details):
-Provide a full detailed description of all the information about the user, including programming ability, topic expected to cover (in detail), specific learning requirements, notes based off the user's personality/behavior or other additional information that may help with problem set engagement. 
-
-
-start looking at orchestrator frameworks
-and models
-
-with spec
-
-need to route to each agent
-each route will use different POST url
-
-(from MITx Problem Set examples)
-Spec Schema:
-
-TODO
-refer to MITx problem sets as examples
-
-4. agent pipeline
-
-will need web access (search agent)
-coding agent
-
-

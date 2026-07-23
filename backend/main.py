@@ -15,6 +15,8 @@ logger = logging.getLogger("uvicorn")
 app = FastAPI()
 
 load_dotenv()
+
+MAX_API_RETRIES = 3
 provider = "HACKCLUBAI"  # Choose HACKCLUBAI or OPENROUTER
 
 chat_model = "deepseek/deepseek-v4-flash"
@@ -80,29 +82,41 @@ async def chat_with_ai(model: str, content: list, tools: list | None = None, res
                     "tools": tools
                 }
             )
-        
-    response = await asyncio.to_thread(make_request)
+
+    current_tries = 0
+    error_str = ""
     
-    if not response.ok:
-        try:
-            parsed_error = response.json()
-            if "error" in parsed_error:
-                error_data = parsed_error["error"]["message"] + "\n" + str(parsed_error)
-            else:
-                error_data = parsed_error
-        except Exception as e:
-            logger.warning("Could not parse error: %s", e)
-            error_data = response.text[:500]
-        error_str = f"Error {response.status_code}: {error_data}"
-        logger.warning(error_str)
+    while current_tries <= MAX_API_RETRIES:
+        if current_tries > 0:
+            logger.info("Retrying request: %s of %s retries", current_tries, MAX_API_RETRIES)
+        response = await asyncio.to_thread(make_request)
+        current_tries += 1
 
+        # Error handling
+        if not response.ok:
+            try:
+                parsed_error = response.json()
+                if "error" in parsed_error:
+                    error_data = parsed_error["error"]["message"] + "\n" + str(parsed_error)
+                else:
+                    error_data = parsed_error
+            except Exception as e:
+                logger.warning("Could not parse error: %s", e)
+                error_data = response.text[:500]
+            error_str = f"Error {response.status_code}: {error_data}"
+            logger.warning(error_str)
+            # Goes back to top of while loop
+            continue
+
+        # Return successful API request
         if return_json:
-            return {"error": error_str}
-        return error_str
+            return response.json()
+        return response.json()["choices"][0]["message"]["content"]
 
+    # If all MAX_API_RETRIES reached
     if return_json:
-        return response.json()
-    return response.json()["choices"][0]["message"]["content"]
+        return {"error": error_str}
+    return error_str
 
 
 class Content(BaseModel):
