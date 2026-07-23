@@ -310,7 +310,14 @@ async def build(spec: SpecDetails) -> dict:
             },
             ...
         ],
-        "code": str
+        "files": [
+            {
+                "name": str,
+                "details": str,
+                "data": str
+            },
+            ...
+        ]
     }
     """
     start_time = datetime.now()
@@ -497,7 +504,7 @@ async def build(spec: SpecDetails) -> dict:
 
     # Writes code section
     coder_prompt = """
-    You are a model deployed as part of a learning app specifically focused on programming. The app will generate engaging, stylized, homework like problem sets to exercise and teach techniques and content. Each problem set is split into seperate sections, each made as linked, cohesive lessons. The sections are created by 2 seperate agents: the writer and coder. You are the coder agent, tasked to write the skeleton code and datasets (if needed) for the section. Within the skeleton code, ensure docstrings are clear, with empty functions obvious. The end goal is to allow the user to learn by doing and following the story, but if some parts are best taught outside of context, the description agent will write it in the problem description. You will be provided with information on the overall story, what functions and classes to implement, and the user's task to complete for the entire problem set. For extra information, you will also see each section's description. These are the prewritten descriptions for each problem set section referring to your code. You are also provided with pointers in each section: coding_agent_notes to guide you on what code to include for each section. Your main goal is to balance the user's learning experience between fun and educational. 
+    You are a model deployed as part of a learning app specifically focused on programming. The app will generate engaging, stylized, homework like problem sets to exercise and teach techniques and content. Each problem set is split into seperate sections, each made as linked, cohesive lessons. The sections are created by 2 seperate agents: the writer and coder. You are the coder agent, tasked to write the skeleton code and datasets (if needed) for the section. Within the skeleton code, ensure docstrings are clear, with empty functions obvious. The end goal is to allow the user to learn by doing and following the story, but if some parts are best taught outside of context, the description agent will write it in the problem description. You will be provided with information on the overall story, what functions and classes to implement, and the user's task to complete for the entire problem set. For extra information, you will also see each section's description. These are the prewritten descriptions for each problem set section referring to your code. You are also provided with pointers in each section: coding_agent_notes to guide you on what code to include for each section. Your main goal is to balance the user's learning experience between fun and educational. In the output schema, there is a files array to output any code/dataset needed for the problem set.
 
     Example:
     ###########################
@@ -623,8 +630,42 @@ async def build(spec: SpecDetails) -> dict:
         {"role": "user", "content": json.dumps(full_output_json)}
     ]
 
-    code = await chat_with_ai(coder_model, coder_messages)
-    full_output_json["code"] = code
+    template_fields = {
+        "type": "object",
+        "properties": {
+            "title": {
+                "type": "string",
+                "description": "The file's title (include file extensions, ex: .py, .txt)"
+            },
+            "details": {
+                "type": "string",
+                "description": "Description of what this file is for, what it contains, additional info, etc. for other agents to quickly identify its purpose"
+            },
+            "data": {
+                "type": "string",
+                "description": "Contains full code (for scripts) or data for datasets. Ex: the entire main.py contents as a code string, or a data dump of data.csv"
+            }
+        },
+        "required": ["title", "details", "data"],
+        "additionalProperties": False
+    }
+    
+    response_format = {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "problem_set_files",
+            "strict": True,
+            "schema": {
+                "type": "array",
+                "description": "A list of every file generated for the problem set",
+                "minItems": 1,
+                "items": template_fields
+            }
+        }
+    }
+
+    code = await chat_with_ai(coder_model, coder_messages, response_format=response_format)
+    full_output_json["files"] = json.loads(code)
 
     time_elapsed = datetime.now() - last_time
     logger.info("Code built in: %s", time_elapsed)

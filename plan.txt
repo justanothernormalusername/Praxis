@@ -1,7 +1,5 @@
 Next: 
 better prompts
-output file handling
-dataset generation
 
 full agent verification
 
