@@ -52,9 +52,9 @@ def clist() -> None:
 def plan(learning_details: str) -> dict:
     spec = json.loads(requests.post("http://127.0.0.1:8000/plan", json={"learning_details": learning_details}).json())
 
-    with open("out/spec.txt", "w", encoding="utf-8") as file:
+    with open("out/spec.json", "w", encoding="utf-8") as file:
         json.dump(spec, file, indent=4, ensure_ascii=False)
-        
+
     return spec
 
 @registry.register("build")
@@ -66,14 +66,14 @@ def build(spec: dict) -> None:
     
     build_output = requests.post("http://127.0.0.1:8000/build", json=spec).json()
 
-    with open("out/out.txt", "w", encoding="utf-8") as file:
+    with open("out/out.json", "w", encoding="utf-8") as file:
         json.dump(build_output, file, indent=4, ensure_ascii=False)
 
     print(build_output)
 
 @registry.register("generate")
 def generate() -> None:
-    with open("out/out.txt", "r", encoding="utf-8") as out:
+    with open("out/out.json", "r", encoding="utf-8") as out:
         with open("out/out.py", "w", encoding="utf-8") as file:
             file.write(json.loads(out.read())["code"])
 
@@ -107,7 +107,7 @@ while True:
 # Plan
 spec = plan(reply["learning_details"])
 
-# In out.txt
+# In out.json
 build(spec)
 
 generate()

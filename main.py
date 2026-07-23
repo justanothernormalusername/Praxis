@@ -272,8 +272,9 @@ async def orchestrator(details: Details) -> str:
 
     response = await chat_with_ai(plan_model, content, response_format=response_format)
 
-    time_elapsed = datetime.now() - start_time
-    logger.info("Spec generated in: %s", time_elapsed)
+    end_time = datetime.now()
+    time_elapsed = end_time - start_time
+    logger.info("Spec completed in: %s at %s", time_elapsed, end_time.strftime("%H:%M:%S"))
 
     return response
 
