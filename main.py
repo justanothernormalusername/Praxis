@@ -22,8 +22,8 @@ provider = "HACKCLUBAI"  # Choose HACKCLUBAI or OPENROUTER
 chat_model = "deepseek/deepseek-v4-flash"
 plan_model = "anthropic/claude-sonnet-5"
 
-writer_model = "z-ai/glm-5.2"
-coder_model = "z-ai/glm-5.2"
+writer_model = "z-ai/glm-5.2"  # "openai/gpt-oss-120b:nitro"
+coder_model = "z-ai/glm-5.2"  # "z-ai/glm-5.2"
 
 if provider == "HACKCLUBAI":
     API_KEY = os.getenv("HACKCLUBAI_API_KEY")
@@ -504,7 +504,7 @@ async def build(spec: SpecDetails) -> dict:
 
     # Writes code section
     coder_prompt = """
-    You are a model deployed as part of a learning app specifically focused on programming. The app will generate engaging, stylized, homework like problem sets to exercise and teach techniques and content. Each problem set is split into seperate sections, each made as linked, cohesive lessons. The sections are created by 2 seperate agents: the writer and coder. You are the coder agent, tasked to write the skeleton code and datasets (if needed) for the section. Within the skeleton code, ensure docstrings are clear, with empty functions obvious. The end goal is to allow the user to learn by doing and following the story, but if some parts are best taught outside of context, the description agent will write it in the problem description. You will be provided with information on the overall story, what functions and classes to implement, and the user's task to complete for the entire problem set. For extra information, you will also see each section's description. These are the prewritten descriptions for each problem set section referring to your code. You are also provided with pointers in each section: coding_agent_notes to guide you on what code to include for each section. Your main goal is to balance the user's learning experience between fun and educational. In the output schema, there is a files array to output any code/dataset needed for the problem set.
+    You are a model deployed as part of a learning app specifically focused on programming. The app will generate engaging, stylized, homework like problem sets to exercise and teach techniques and content. Each problem set is split into seperate sections, each made as linked, cohesive lessons. The sections are created by 2 seperate agents: the writer and coder. You are the coder agent, tasked to write the skeleton code and datasets (if needed) for the section. Within the skeleton code, ensure docstrings are clear, with empty functions obvious. The end goal is to allow the user to learn by doing and following the story, but if some parts are best taught outside of context, the description agent will write it in the problem description. You will be provided with information on the overall story, what functions and classes to implement, and the user's task to complete for the entire problem set. For extra information, you will also see each section's description. These are the prewritten descriptions for each problem set section referring to your code. You are also provided with pointers in each section: coding_agent_notes to guide you on what code to include for each section. Your main goal is to balance the user's learning experience between fun and educational. In the output schema, there is a files array to output any code/dataset needed for the problem set. The title field is reserved for the filename (include file extensions, ex: main.py, data.txt). Never include whitespaces in the filename, use underscores instead. 
 
     Example:
     ###########################
@@ -635,7 +635,7 @@ async def build(spec: SpecDetails) -> dict:
         "properties": {
             "title": {
                 "type": "string",
-                "description": "The file's title (include file extensions, ex: .py, .txt)"
+                "description": "The filename (include file extensions, ex: main.py, data.txt) - never include whitespaces in the filename, use underscores instead"
             },
             "details": {
                 "type": "string",
