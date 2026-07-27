@@ -15,6 +15,9 @@ chatbox
 text input field
 send button
 
+
+before Nest hosting, look at Docker Compose
+
 specific tags: <div>, <input>, <button>, <h1>
 
 
