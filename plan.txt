@@ -3,6 +3,7 @@ test with user
 better prompts
 
 full agent verification
+use cheap/fast model - oss?
 
 frontend start
 webpage
