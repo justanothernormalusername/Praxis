@@ -75,6 +75,7 @@ body {
 .right-component {
     flex-basis: 0;
     flex-grow: 2;
+    overflow-x: hidden;
     position: relative;
     display: flex;
     flex-direction: column;
@@ -90,7 +91,7 @@ body {
     position: absolute;
     width: 100%;
     z-index: 3;
-    padding: 0 0 3rem 3rem;
+    padding: 0 0 2rem 3rem;
     margin-left: -2rem;
     margin-bottom: -1rem;
     color: #443742;
@@ -101,6 +102,7 @@ body {
 .chat-messages {
     flex-grow : 8;
     flex-basis: 0;
+    width: 100%;
     z-index: 2;
     display: flex;
     flex-direction: column;
@@ -108,9 +110,12 @@ body {
     min-height: 0;
     padding: 2.5rem 2rem 2rem 0.5rem;
     color: #443742;
+    scrollbar-color: #EDD9A3 #CEA07E;
 }
 .chat-messages > div > p {
-    margin: 0
+    margin: 0;
+    overflow-wrap: break-word;
+    white-space: pre-line;
 }
 .ai-message {
     padding: 1rem 1.5rem;
@@ -119,16 +124,14 @@ body {
 }
 .user-message {
     padding: 1rem 1.5rem;
-    width: 75%;
+    max-width: 75%;
     align-self: flex-end;
     border-radius: 25px;
     background-color: #EDD9A3;
 }
 
 .chat-input {
-    flex-grow: 0.5;
     display: flex;
-    flex-basis: 0;
     align-items: center;
     border-radius: 25px;
     padding: 1.5rem;
@@ -143,9 +146,10 @@ body {
     outline: none;
     background: transparent;
     color: #443742;
+    scrollbar-color: #CEA07E #EDD9A3;
 }
 
-.button-style {
+.send-button {
     margin: -0.5rem 0 -0.5rem 0;
     padding: 0.5rem;
     border: none;
