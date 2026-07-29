@@ -3,6 +3,35 @@ const button = document.querySelector(".send-button");
 
 let chatOpen = true;
 
+function displayMessage(messageType, message) {
+    // Message creation
+    const para = document.createElement("p");
+    const node = document.createTextNode(message);
+
+    const div = document.createElement("div");
+
+    if (messageType === "ai-message") {
+        div.classList.add("ai-message");
+    }
+    else if (messageType === "user-message") {
+        div.classList.add("user-message");
+    }
+    else {
+        throw new Error("You didn't define messageType correctly!");
+    }
+
+    para.appendChild(node);
+    div.appendChild(para);
+    const chatMessagesDiv = document.querySelector(".chat-messages");
+    chatMessagesDiv.appendChild(div);
+
+    // Scroll to bottom
+    chatMessagesDiv.scroll({
+        behavior: "smooth",
+        top: chatMessagesDiv.scrollHeight
+    });
+}
+
 function send() {
     // Only processes button press when chat is open (ai not answering)
     if (chatOpen) {
@@ -10,31 +39,12 @@ function send() {
         if (message != "") {
             // Reset chatbox expansion
             inputBox.style.height = "";
-            
+
             inputBox.value = "";
 
-            // Message creation
-            const para = document.createElement("p");
-            const node = document.createTextNode(message);
+            displayMessage("user-message", message);
 
-            const div = document.createElement("div");
-            div.classList.add("user-message");
-
-            para.appendChild(node);
-            div.appendChild(para);
-            const chatMessagesDiv = document.querySelector(".chat-messages");
-            chatMessagesDiv.appendChild(div);
-
-            // Scroll to bottom
-            chatMessagesDiv.scroll({
-                behavior: "smooth",
-                top: chatMessagesDiv.scrollHeight
-            });
-
-
-            chatOpen = false;
-            // query backend
-            chatOpen = true;
+            chat(message);
         }
     }
 }
@@ -49,7 +59,6 @@ inputBox.addEventListener("keydown", (event) => {
 
 // Input box auto expand
 const heightLimit = document.querySelector(".right-component").offsetHeight * 0.5;
-console.log(heightLimit)
 inputBox.addEventListener("input", (event) => {
     const chatboxDiv = inputBox.parentElement;
     inputBox.style.height = "";
@@ -58,4 +67,76 @@ inputBox.addEventListener("input", (event) => {
 
 // Send button functionality
 button.addEventListener("click", send);
+
+
+
+// Backend connection!
+// code rewritten from backend/client.py
+
+let instructions = "You are a model deployed as part of a learning app called Praxis. The learning app specifically focuses on programming, by generating engaging, stylized, homework like problem sets to exercise and teach techniques and content. The user will typically come in with only a vague idea of what they want to accomplish or learn, and your goal is to clarify the user's end learning goal and preference as accurately and consise as possible. The topic must be narrow enough to fit into a simple problem set, for example: a specific algorithm, an introduction to an advanced concept. Whole units or subfields are too vague. You need to make sure the content fits the experience of the user so previous knowledge must be clarified. For learning preference, the style of the problem set (narrative, storytelling, real-world, implementation, interview, etc.) must also be clarified. You are the first interaction the user will experience on this app. This means asking clarifying questions and suggesting options that may be helpful for the user to organize their thoughts. The chat between you and the user should stay friendly and conversational. This means that responses should not be structured in lists, bullets or charts, etc. Keep responses consise in sentence form, and questions should only be asked one at a time. Suggestions can be made, such as suggesting information to provide, and this can include more than one request. All in all, the secondary goal is to chat with the user and keep the enviornment approachable and friendly, making sure not to overwhelm the user with information and questions. Lastly, before finalizing the conversation, ask a final confirmation with all the information you have to ensure no assumptions are being made and everything is accurate. This way the user can correct any invalid information.";
+
+let messages = [
+    {"role": "system", "content": instructions},
+    {"role": "assistant", "content": "Hi I'm Praxis, how can I help?"}
+];
+
+async function chat(message) {
+    chatOpen = false;
+
+    messages.push({"role": "user", "content": message});
+
+    let reply = await fetch("http://127.0.0.1:8000/chat", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"  // Tells the server that data is JSON
+        },
+        body: JSON.stringify({"messages": messages})
+    });
+
+    reply = await reply.json();
+    let aiMessage = reply["response"];
+    messages.push({"role": "assistant", "content": aiMessage});
+
+    displayMessage("ai-message", aiMessage);
+
+    if (reply["status"] !== "done") {
+        chatOpen = true;
+    }
+    else {
+        build(await plan(reply["learning_details"]));
+    }
+    return reply;
+}
+
+async function plan(learningDetails) {
+    let response = await fetch("http://127.0.0.1:8000/plan", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({"learning_details": learningDetails})
+    });
+
+    let spec = await response.json();
+
+    return spec;
+}
+
+async function build(spec) {
+    let response = await fetch("http://127.0.0.1:8000/build", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: spec
+    });
+
+    let buildOutput = await response.json();
+
+    console.log(buildOutput);
+}
+
+async function test() {
+    window.prompt("sometext","defaultText");
+}
 

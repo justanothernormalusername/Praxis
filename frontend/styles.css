@@ -119,7 +119,7 @@ body {
 }
 .ai-message {
     padding: 1rem 1.5rem;
-    width: fit-content;
+    width: 100%;
     align-self: flex-start;
 }
 .user-message {

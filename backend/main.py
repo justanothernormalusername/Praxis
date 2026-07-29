@@ -1,4 +1,5 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from datetime import datetime
@@ -12,11 +13,26 @@ import logging
 
 logger = logging.getLogger("uvicorn")
 
+# Start the app
 app = FastAPI()
+
+# Enable browser origins to connect to backend
+origins = [
+    "http://127.0.0.1:5500",  # dev domains
+    "http://localhost:5500",  # dev domains
+    "https://myfutureproductiondomain.com"
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
 
 load_dotenv()
 
-MAX_API_RETRIES = 3
+MAX_API_RETRIES = 50
 provider = "HACKCLUBAI"  # Choose HACKCLUBAI or OPENROUTER
 
 chat_model = "deepseek/deepseek-v4-flash"
