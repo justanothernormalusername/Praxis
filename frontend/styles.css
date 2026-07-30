@@ -158,4 +158,36 @@ body {
 }
 .button-style:hover {
     opacity: 0.5;
+}   
+
+.popup-overlay {
+    position: fixed;
+    display: none;
+    z-index: 10;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    background: rgba(0, 0, 0, 0.5);
 }
+.popup {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 15px;
+    padding: 20px;
+    background-color: #ff0000;
+}
+.popup-content {
+    text-align: center;
+}
+.popup button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    background-color: #CEA07E;
+}
+.popup button:hover {
+    background-color: #ccb3a2;
+}   
