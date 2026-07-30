@@ -1,20 +1,14 @@
 Next: 
-test with user
 better prompts
 
 full agent verification
 use cheap/fast model - oss?
 
-frontend start
-webpage
-chat menu
-
 FRONTEND BIG IDEAS:
-Static HTML page/document structure
-title
-chatbox
-text input field
-send button
+webpage sections:
+chat page - complete
+compile all info (including descriptions in plaintext) into zip, download from simple popup
+host on Nest
 
 
 before Nest hosting, look at Docker Compose
