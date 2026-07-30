@@ -1,14 +1,18 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from datetime import datetime
 from typing import overload, Literal
+from io import BytesIO
+from collections.abc import Iterator
 import asyncio
 import requests
 import json
 import os
 import logging
+import zipfile
 
 
 logger = logging.getLogger("uvicorn")
@@ -697,6 +701,41 @@ async def build(spec: SpecDetails) -> dict:
 
     # output file
     return full_output_json
+
+class FullOutput(BaseModel):
+    full_output_json: dict
+
+@app.post("/generate")
+async def generate(full_output: FullOutput) -> StreamingResponse:
+
+    def generate_zip_stream() -> Iterator[bytes]:
+        pset_files = full_output.full_output_json["files"]
+
+        zip_buffer = BytesIO()
+
+        with zipfile.ZipFile(zip_buffer, "w", compression=zipfile.ZIP_DEFLATED) as zip_file:
+            for file_json in pset_files:
+                file_bytes_io = BytesIO(file_json["data"].encode("utf-8"))
+                zip_file.writestr(file_json["title"], file_bytes_io.getvalue())
+
+        zip_buffer.seek(0)
+
+        chunk_size = 8192  # 8 KB chunks
+        while True:
+            chunk = zip_buffer.read(chunk_size)
+            if not chunk:
+                break
+            yield chunk
+
+    headers = {
+        "Content-Disposition": 'attachment; filename="pset.zip"'
+    }
+
+    return StreamingResponse(
+        generate_zip_stream(),
+        media_type="application/zip",
+        headers=headers
+    )
 
 
 # For reference purposes only

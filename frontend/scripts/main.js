@@ -68,6 +68,16 @@ inputBox.addEventListener("input", (event) => {
 // Send button functionality
 button.addEventListener("click", send);
 
+let downloadButton = document.querySelector(".popup button")
+downloadButton.addEventListener("click", download)
+
+let buttonSFX = new Audio ("buttonSFX.ogg")
+async function download() {
+    buttonSFX.play()
+}
+
+
+
 
 
 // Backend connection!
@@ -103,40 +113,65 @@ async function chat(message) {
         chatOpen = true;
     }
     else {
-        build(await plan(reply["learning_details"]));
+        compile(reply["learning_details"]);
     }
     return reply;
 }
 
-async function plan(learningDetails) {
-    let response = await fetch("http://127.0.0.1:8000/plan", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({"learning_details": learningDetails})
-    });
 
-    let spec = await response.json();
 
-    return spec;
+// Compiles problem set with learning details and displays download
+async function compile(learningDetailsInput) {
+
+    // Requests spec generation from chat output (learningDetails) and returns full spec
+    async function plan(learningDetails) {
+        let response = await fetch("http://127.0.0.1:8000/plan", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({"learning_details": learningDetails})
+        });
+
+        let spec = await response.json();
+
+        return spec;
+    }
+
+    // Requests problem set build from compiled spec and returns full json
+    async function build(spec) {
+        let response = await fetch("http://127.0.0.1:8000/build", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: spec
+        });
+
+        return await response.json();
+    }
+
+    // Requests pset zip construction from full pset json
+    async function generate(fullJSON) {
+        let response = await fetch("http://127.0.0.1:8000/generate", {
+            method: "POST", 
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({"full_output_json": fullJSON})
+        });
+
+        return await response;
+    }
+
+    let spec = await plan(learningDetailsInput);
+    console.log(spec);
+
+    let psetBuild = await build(spec);
+    console.log(psetBuild);
+    
+    let psetFile = await generate(psetBuild);
+    console.log(psetFile);
+
+    // Display and download psetFile
 }
-
-async function build(spec) {
-    let response = await fetch("http://127.0.0.1:8000/build", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: spec
-    });
-
-    let buildOutput = await response.json();
-
-    console.log(buildOutput);
-}
-
-async function test() {
-    window.prompt("sometext","defaultText");
-}
-

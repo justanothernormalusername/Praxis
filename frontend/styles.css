@@ -177,7 +177,7 @@ body {
     transform: translate(-50%, -50%);
     border-radius: 15px;
     padding: 20px;
-    background-color: #ff0000;
+    background-color: #CEA07E;
 }
 .popup-content {
     text-align: center;
@@ -186,8 +186,15 @@ body {
     padding: 10px 20px;
     border: none;
     border-radius: 4px;
-    background-color: #CEA07E;
+    background-color: #EDD9A3;
+    box-shadow: 0 4px 0 #a78321;
+    transition: all 0.05s ease
 }
 .popup button:hover {
-    background-color: #ccb3a2;
-}   
+    filter: brightness(110%)
+}
+.popup button:active {
+    background-color: #f2e4bf;
+    transform: translateY(4px);
+    box-shadow: 0 0 0 #a78321;
+}

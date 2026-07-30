@@ -10,10 +10,22 @@ chat page - complete
 compile all info (including descriptions in plaintext) into zip, download from simple popup
 host on Nest
 
+features to add:
+write info card
+add download functionality to zip
+loading while chat responds
+loading while pset generates
+maybe a short game?
+ivan game yes
+
+update input box size when window size changes
+
+markdown formatting on chat messages
+
+playtest
+
 
 before Nest hosting, look at Docker Compose
-
-specific tags: <div>, <input>, <button>, <h1>
 
 
 once all responses done, get cheap agent (hy3 free, deepseek flash) to review and quality check
