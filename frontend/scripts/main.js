@@ -1,6 +1,5 @@
 const inputBox = document.querySelector("#user-input");
 const button = document.querySelector(".send-button");
-
 let chatOpen = true;
 
 function displayMessage(messageType, message) {
@@ -71,7 +70,8 @@ button.addEventListener("click", send);
 let downloadButton = document.querySelector(".popup button")
 downloadButton.addEventListener("click", download)
 
-let buttonSFX = new Audio ("buttonSFX.ogg")
+let buttonSFX = new Audio("/static/buttonSFX.ogg")
+console.log(buttonSFX.src)
 async function download() {
     buttonSFX.play()
 }

@@ -1,12 +1,14 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from datetime import datetime
 from typing import overload, Literal
 from io import BytesIO
 from collections.abc import Iterator
+from pathlib import Path
 import asyncio
 import requests
 import json
@@ -33,6 +35,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
+
+
+# Mounts static directory
+frontend_path = Path(__file__).resolve().parent.parent.joinpath("frontend")
+app.mount("/static", StaticFiles(directory=str(frontend_path)), name="frontend")
+
+@app.get("/")
+async def root() -> FileResponse:
+    return FileResponse(str(frontend_path / "index.html"))
 
 load_dotenv()
 
