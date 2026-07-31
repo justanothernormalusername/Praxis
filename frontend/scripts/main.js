@@ -95,7 +95,7 @@ async function chat(message) {
 
     messages.push({"role": "user", "content": message});
 
-    let reply = await fetch("http://127.0.0.1:8000/chat", {
+    let reply = await fetch("/chat", {
         method: "POST",
         headers: {
             "Content-Type": "application/json"  // Tells the server that data is JSON
@@ -125,7 +125,7 @@ async function compile(learningDetailsInput) {
 
     // Requests spec generation from chat output (learningDetails) and returns full spec
     async function plan(learningDetails) {
-        let response = await fetch("http://127.0.0.1:8000/plan", {
+        let response = await fetch("/plan", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -140,7 +140,7 @@ async function compile(learningDetailsInput) {
 
     // Requests problem set build from compiled spec and returns full json
     async function build(spec) {
-        let response = await fetch("http://127.0.0.1:8000/build", {
+        let response = await fetch("/build", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -153,7 +153,7 @@ async function compile(learningDetailsInput) {
 
     // Requests pset zip construction from full pset json
     async function generate(fullJSON) {
-        let response = await fetch("http://127.0.0.1:8000/generate", {
+        let response = await fetch("/generate", {
             method: "POST", 
             headers: {
                 "Content-Type": "application/json"
