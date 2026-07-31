@@ -115,12 +115,22 @@ async function chat(message) {
     messages.push({"role": "assistant", "content": aiMessage});
 
     loadDots.remove();
-    displayMessage("ai-message", aiMessage);
+    
 
     if (reply["status"] !== "done") {
+        displayMessage("ai-message", aiMessage);
         chatOpen = true;
     }
     else {
+        // Hard-coded ai response when tool called
+        displayMessage("ai-message", "Starting problem set creation!");
+
+        // Display loading ui popup
+        let popupOverlay = document.querySelector(".popup-overlay");
+        let loadingScreen = document.querySelector(".loading-screen");
+        popupOverlay.style.display = "block";
+        loadingScreen.style.display = "block";
+
         compile(reply["learning_details"]);
     }
     return reply;
@@ -196,9 +206,13 @@ async function compile(learningDetailsInput) {
     });
     let downloadURL = URL.createObjectURL(blob);
 
+    // Hide loading popup
+    let loadingScreen = document.querySelector(".loading-screen");
+    loadingScreen.style.display = "block";
+
     // Display download popup
-    let popupOverlay = document.querySelector(".popup-overlay");
-    popupOverlay.style.display = "block";
+    let popup = document.querySelector(".popup");
+    popup.style.display = "block";
 
     // Download button functionality
     let downloadButton = document.querySelector(".popup button");

@@ -237,6 +237,7 @@ body {
 }
 .popup {
     position: absolute;
+    display: none;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
@@ -262,4 +263,18 @@ body {
     background-color: #f2e4bf;
     transform: translateY(4px);
     box-shadow: 0 0 0 #a78321;
+}
+
+.loading-screen {
+    position: absolute;
+    display: none;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 15px;
+    padding: 20px;
+    background-color: #CEA07E;
+}
+.loading-content {
+    text-align: center;
 }
