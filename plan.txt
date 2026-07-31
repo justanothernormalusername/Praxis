@@ -1,35 +1,41 @@
-Next: 
-better prompts
+Server commands:
+sudo systemctl start praxis    # start it
+sudo systemctl stop praxis     # stop it
+sudo systemctl restart praxis  # restart it
+sudo systemctl status praxis   # check if running
 
-full agent verification
-use cheap/fast model - oss?
+sudo journalctl -u praxis -f   # view console
+
+PROMPTING: 
+better prompts
+chatbot:
+> narrow down to subject to learn not specific question
+> force narrative
 
 FRONTEND BIG IDEAS:
-webpage sections:
-chat page - complete
-compile all info (including descriptions in plaintext) into zip, download from simple popup
-host on Nest
+### compile all info (including descriptions in plaintext) into zip, download from simple popup
 
-features to add:
-write info card
-add download functionality to zip
-loading while chat responds
+FEATURES:
 loading while pset generates
-maybe a short game?
-ivan game yes
-
 zip file title of pset
-
 fix chatbot outputting null
-
 update input box size when window size changes
-
 markdown formatting on chat messages
+add favicon
 
-playtest
+README
+relied more on Claude for js side of things
+css animations from google
+google-ai
+PLAYTEST
 
-
-before Nest hosting, look at Docker Compose
+LATER:
+Docker Compose
+Waiting room game/entertainment
+loading bar
+description viewer
+full agent verification
+> use cheap/fast model - oss?
 
 
 once all responses done, get cheap agent (hy3 free, deepseek flash) to review and quality check

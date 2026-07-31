@@ -1,5 +1,6 @@
 const inputBox = document.querySelector("#user-input");
 const button = document.querySelector(".send-button");
+const chatMessagesDiv = document.querySelector(".chat-messages");
 let chatOpen = true;
 
 function displayMessage(messageType, message) {
@@ -21,7 +22,7 @@ function displayMessage(messageType, message) {
 
     para.appendChild(node);
     div.appendChild(para);
-    const chatMessagesDiv = document.querySelector(".chat-messages");
+
     chatMessagesDiv.appendChild(div);
 
     // Scroll to bottom
@@ -81,6 +82,23 @@ let messages = [
 
 async function chat(message) {
     chatOpen = false;
+    loadDots = document.createElement("div");
+    loadDots.classList.add("typing-indicator");
+
+    dot = document.createElement("span");
+    loadDots.appendChild(dot);
+    dot = document.createElement("span");
+    loadDots.appendChild(dot);
+    dot = document.createElement("span");
+    loadDots.appendChild(dot);
+
+    chatMessagesDiv.appendChild(loadDots);
+
+    // Scroll to bottom
+    chatMessagesDiv.scroll({
+        behavior: "smooth",
+        top: chatMessagesDiv.scrollHeight
+    });
 
     messages.push({"role": "user", "content": message});
 
@@ -96,6 +114,7 @@ async function chat(message) {
     let aiMessage = reply["response"];
     messages.push({"role": "assistant", "content": aiMessage});
 
+    loadDots.remove();
     displayMessage("ai-message", aiMessage);
 
     if (reply["status"] !== "done") {
@@ -136,8 +155,20 @@ async function compile(learningDetailsInput) {
             },
             body: spec
         });
+        let {task_id} = await response.json();
 
-        return await response.json();
+        // Ping server until build finishes
+        return new Promise((resolve) => {
+            let interval = setInterval(async () => {
+                let statusResponse = await fetch(`/status/${task_id}`);
+                let statusData = await statusResponse.json();
+
+                if (statusData["status"] === "done") {
+                    clearInterval(interval);
+                    resolve(statusData["result"]);
+                }
+            }, 5000);  // Pings every 5 seconds
+        });
     }
 
     // Requests pset zip construction from full pset json
