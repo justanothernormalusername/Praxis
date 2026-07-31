@@ -18,6 +18,10 @@ loading while pset generates
 maybe a short game?
 ivan game yes
 
+zip file title of pset
+
+fix chatbot outputting null
+
 update input box size when window size changes
 
 markdown formatting on chat messages

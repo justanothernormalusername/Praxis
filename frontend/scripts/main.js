@@ -67,17 +67,6 @@ inputBox.addEventListener("input", (event) => {
 // Send button functionality
 button.addEventListener("click", send);
 
-let downloadButton = document.querySelector(".popup button")
-downloadButton.addEventListener("click", download)
-
-let buttonSFX = new Audio("/static/buttonSFX.ogg")
-console.log(buttonSFX.src)
-async function download() {
-    buttonSFX.play()
-}
-
-
-
 
 
 // Backend connection!
@@ -161,17 +150,41 @@ async function compile(learningDetailsInput) {
             body: JSON.stringify({"full_output_json": fullJSON})
         });
 
-        return await response;
+        return await response.arrayBuffer();
     }
 
     let spec = await plan(learningDetailsInput);
-    console.log(spec);
 
     let psetBuild = await build(spec);
-    console.log(psetBuild);
     
     let psetFile = await generate(psetBuild);
-    console.log(psetFile);
 
-    // Display and download psetFile
+    // Preparing binary zip for download
+    let blob = new Blob([psetFile], {
+        type: "application/zip"
+    });
+    let downloadURL = URL.createObjectURL(blob);
+
+    // Display download popup
+    let popupOverlay = document.querySelector(".popup-overlay");
+    popupOverlay.style.display = "block";
+
+    // Download button functionality
+    let downloadButton = document.querySelector(".popup button");
+    downloadButton.addEventListener("click", download);
+
+    // Button sound effect
+    let buttonSFX = new Audio("/static/buttonSFX.ogg");
+    // Runs once user clicks download button
+    async function download() {
+        buttonSFX.play();
+
+        // Temporary anchor to trigger save dialog
+        const link = document.createElement("a");
+        link.href = downloadURL;
+        link.download = "pset.zip";
+
+        // Trigger download
+        link.click();
+    }
 }

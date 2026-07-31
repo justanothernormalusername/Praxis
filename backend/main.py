@@ -343,7 +343,7 @@ async def build(spec: SpecDetails) -> dict:
         ],
         "files": [
             {
-                "name": str,
+                "title": str,
                 "details": str,
                 "data": str
             },
@@ -721,6 +721,7 @@ async def generate(full_output: FullOutput) -> StreamingResponse:
 
     def generate_zip_stream() -> Iterator[bytes]:
         pset_files = full_output.full_output_json["files"]
+        desc_files = full_output.full_output_json["parts"]  # DESCRIPTIONS ONLY
 
         zip_buffer = BytesIO()
 
@@ -728,6 +729,11 @@ async def generate(full_output: FullOutput) -> StreamingResponse:
             for file_json in pset_files:
                 file_bytes_io = BytesIO(file_json["data"].encode("utf-8"))
                 zip_file.writestr(file_json["title"], file_bytes_io.getvalue())
+
+            # Adding descriptions as text files (REMOVE ON FUTURE RELEASES)
+            for part in desc_files:
+                file_bytes_io = BytesIO(part["details"].encode("utf-8"))
+                zip_file.writestr(part["title"] + ".txt", file_bytes_io.getvalue())
 
         zip_buffer.seek(0)
 
