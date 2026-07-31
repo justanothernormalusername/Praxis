@@ -11,9 +11,9 @@ better prompts
 chatbot:
 > narrow down to subject to learn not specific question
 > force narrative
-
-FRONTEND BIG IDEAS:
-### compile all info (including descriptions in plaintext) into zip, download from simple popup
+orchestrator:
+> correct file names (instead of titles)
+> include part number/intro, etc
 
 FEATURES:
 zip file title of pset

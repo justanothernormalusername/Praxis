@@ -208,7 +208,7 @@ async function compile(learningDetailsInput) {
 
     // Hide loading popup
     let loadingScreen = document.querySelector(".loading-screen");
-    loadingScreen.style.display = "block";
+    loadingScreen.style.display = "none";
 
     // Display download popup
     let popup = document.querySelector(".popup");
