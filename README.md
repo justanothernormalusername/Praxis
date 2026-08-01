@@ -13,7 +13,7 @@ Praxis is a personal learning app for programming. It teaches you specific progr
 
 3. The spec is split into parts, where the writer writes each description first, before the coder recieves the spec and writes the skeleton code. 
 
-4. Each JSON is compressed into files then compiled into a pset.zip file for the user to download. 
+4. Each JSON is compressed into files then compiled into a .zip file for the user to download. 
 
 ## How was this made?
 Frontend made with simple JavaScript, CSS, and HTML. 
@@ -25,7 +25,11 @@ AI uses an [openrouter](https://openrouter.ai/) key from [Hack Club AI](https://
 [Ubuntu](https://ubuntu.com/) Linux web server howsted with [systemd](https://systemd.io/) on [Hack Club Nest](https://hackclub.app/)!
 
 ### AI DISCLOSURE
-No AI code was copied and pasted - *I made sure to type everything out by hand to facilitate learning*! Used Claude Sonnet with project planning and learning syntax. It guided me through learning HTML, CSS, JS, and the various Python libraries. Minimal AI generated code; I specifically requested the AI to never write any code, only give keywords for me to Google and formulate a solution. 
+Minimal AI generated code; I specifically requested the AI to never write any code, only give keywords for me to Google and formulate a solution. 
+
+No AI code was copied and pasted - *made sure to type everything out by hand to facilitate learning*! 
+
+Used Claude Sonnet with project planning and learning syntax. It guided me through learning HTML, CSS, JS, and the various Python libraries. 
 
 Some code (ex. CSS animations) were typed out from the built-in Google AI after searching. 
 
