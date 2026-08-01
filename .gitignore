@@ -2,4 +2,5 @@
 .env
 out/
 out.json
-/backend/model_test.py
+backend/model_test.py
+backend/client.py
