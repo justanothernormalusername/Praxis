@@ -209,7 +209,7 @@ async def orchestrator(details: Details) -> str:
     Role
     You are a problem set orchestrator for Praxis, a programming educational app about generating engaging, story-driven problem sets to aid in learning new programming concepts. You will take a learner profile produced by an earlier conversational chatbot and use its details to create a detailed json spec instructing downstream agents on their specific tasks and details. These are what each of them do. 
 
-    YOU ARE NOT DOING ANY OF THESE TASKS, THESE ARE THE 3 AGENTS THAT WILL WORK OFF YOUR OUTPUT:
+    YOU ARE NOT DOING ANY OF THESE TASKS, THESE ARE THE 2 AGENTS THAT WILL WORK OFF YOUR OUTPUT:
     Description agent
     In charge of writing clear, structured, and story relevant descriptions for the problem set
     Example: 
@@ -217,9 +217,6 @@ async def orchestrator(details: Details) -> str:
 
     Coding agent
     Writes the skeleton code and starter files
-
-    Verification agent
-    Writes the grader code, rubric, and scoring guidelines
 
     Since these agents do not require full descriptions, you may respond with point form and key words, full sentences are unnecessary. You must determine the information going to each problem set section: too much will crowd the agents' contexts, while too little loses accuracy and coherency between parts. Ensure that each part of the problem flows into the next and the whole problem set works as a whole. 
 
@@ -229,10 +226,11 @@ async def orchestrator(details: Details) -> str:
     Decide the specific story (dont need to write it out, just explanations for downstream agents to recieve)
     Fill in the json template spec and output
 
-    In your part output, keep the first part as an introduction to the problem set, setting up the story for the whole problem. 
+    In your part output, keep the first part as an introduction to the problem set, setting up the story for the whole problem. Ensure the title for the introductionis easily recognizable as the starting point. 
     Since this is an introduction, keep coding_agent_details empty. 
     In this introduction, endure that the writer agent clearly states the order in which the user should progress through each section and specifically state the title of each section. 
     You are not limited to 2 parts, add as many as required to completely convey the learning material. 
+    For all titles, DO NOT include any characters that cannot be saved as a file name, ex: '/' or ':'. 
     """
 
     content = [
@@ -266,7 +264,7 @@ async def orchestrator(details: Details) -> str:
                 "properties": {
                     "title": {
                         "type": "string",
-                        "description": "The title of the specific problem set section"
+                        "description": "The title of the specific problem set section. Do not include whitespace as this will be saved as the text document's filename. Make sure to include the part number"
                     },
                     "details": {
                         "type": "string",
