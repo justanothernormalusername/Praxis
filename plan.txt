@@ -15,7 +15,7 @@ orchestrator:
 > correct file names (instead of titles)
 > include part number/intro, etc
 
-FEATURES:
+FEATURES TO ADD:
 zip file title of pset
 update input box size when window size changes
 markdown formatting on chat messages
@@ -26,7 +26,7 @@ css animations from google
 google-ai
 PLAYTEST
 
-LATER:
+ADD AFTER FIRST SHIP:
 Docker Compose
 Waiting room game/entertainment
 loading bar
