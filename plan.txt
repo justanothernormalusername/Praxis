@@ -7,7 +7,6 @@ sudo systemctl status praxis   # check if running
 sudo journalctl -u praxis -f   # view console
 
 PROMPTING: 
-better prompts
 chatbot:
 > narrow down to subject to learn not specific question
 > force narrative
